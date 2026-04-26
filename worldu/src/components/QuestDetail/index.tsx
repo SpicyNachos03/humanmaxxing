@@ -9,8 +9,7 @@ import { useGeolocation, calculateDistance } from '@/hooks/useGeolocation';
 import { QRScanner } from '@/components/QRScanner';
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
 import { useSession } from 'next-auth/react';
-import { Icon } from '@/components/Icon';
-import { ClipboardCheck, Lock, Label, MapPin, Camera, Search, Check } from 'iconoir-react';
+import { getQuestCooldownRemainingHours } from '@/lib/questCooldown';
 
 interface QuestDetailProps {
   quest: Quest;
@@ -257,57 +256,47 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
   };
 
   return (
-    <div className="w-full animate-fade-in">
-      <div className="rounded-2xl overflow-hidden mb-4 border border-gray-100 shadow-sm">
-        <div className="p-5 bg-brand">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-              <Icon name={quest.icon} className="w-7 h-7 text-white-force" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-black-force">{quest.title}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-lg font-bold text-black-force">+{quest.points}</span>
-                <span className="text-sm text-white-force">points</span>
-              </div>
+    <div className="w-full">
+      <div className="border-2 border-gray-200 rounded-xl p-6 mb-4">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-4xl">{quest.icon}</span>
+          <div>
+            <h1 className="text-2xl font-bold">{quest.title}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-lg font-bold text-green-600">+{quest.points}</span>
+              <span className="text-sm text-gray-500">points</span>
             </div>
           </div>
         </div>
 
-        <div className="p-5 space-y-4 bg-white">
-          <div className="flex items-start gap-3">
-            <ClipboardCheck className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-            <div>
-              <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide mb-1">Instructions</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">{quest.instructions}</p>
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold mb-2">Instructions</h3>
+            <p className="text-gray-600">{quest.instructions}</p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold mb-2">Verification Methods</h3>
+            <div className="flex flex-wrap gap-2">
+              {getVerificationLabels().map((label, index) => (
+                <span key={index} className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                  {label}
+                </span>
+              ))}
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <Lock className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-            <div>
-              <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide mb-1">Verification</h3>
-              <span className="text-sm px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium">
-                {getVerificationLabel()}
-              </span>
-            </div>
+          <div>
+            <h3 className="font-semibold mb-2">Category</h3>
+            <span className="text-sm px-3 py-1 bg-gray-100 rounded-full capitalize">
+              {quest.category}
+            </span>
           </div>
-
-          <div className="flex items-start gap-3">
-            <Label className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-            <div>
-              <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide mb-1">Category</h3>
-              <span className="text-sm px-3 py-1 bg-green-50 text-green-700 rounded-full capitalize font-medium">
-                {quest.category}
-              </span>
-            </div>
-          </div>
-
           {quest.targetLocation && (
-            <div className="flex items-start gap-3">
-              <MapPin className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-              <div>
-                <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide mb-1">Location</h3>
+            <div>
+              <h3 className="font-semibold mb-2">Location</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">📍</span>
                 <span className="text-sm text-gray-600">
                   {quest.targetLocation.name || 'Target location'} (within {quest.targetLocation.radiusMeters}m)
                 </span>
@@ -318,10 +307,8 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
       </div>
 
       {requiresPhoto && (
-        <div className="border border-gray-100 shadow-sm rounded-2xl p-4 mb-4 bg-white">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <Camera className="w-5 h-5 text-green-600" /> Photo Proof
-          </h3>
+        <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
+          <h3 className="font-semibold mb-3">Photo Proof</h3>
           <input
             ref={fileInputRef}
             type="file"
@@ -331,25 +318,22 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
             className="hidden"
           />
           {photoPreview ? (
-            <div>
-              <div className="relative w-full h-48 mb-3">
-                <Image
-                  src={photoPreview}
-                  alt="Quest proof"
-                  fill
-                  className="object-cover rounded-xl"
-                />
-              </div>
-              <Button
+            <div className="relative w-full h-48">
+              <Image
+                src={photoPreview}
+                alt="Quest proof"
+                fill
+                className="object-cover rounded-lg"
+              />
+              <button
                 onClick={() => {
                   setPhotoPreview(null);
                   if (fileInputRef.current) fileInputRef.current.value = '';
                 }}
-                variant="secondary"
-                className="w-full"
+                className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center"
               >
-                Retake Photo
-              </Button>
+                ✕
+              </button>
             </div>
           ) : (
             <Button
@@ -357,16 +341,16 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
               variant="secondary"
               className="w-full"
             >
-              Take Photo
+              📷 Take Photo
             </Button>
           )}
         </div>
       )}
 
       {requiresLocation && (
-        <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4">
-          <div className="flex items-center gap-2 text-green-700">
-            <MapPin className="w-4 h-4 shrink-0" />
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2 text-blue-700">
+            <span>📍</span>
             <span className="text-sm">
               {locationLoading
                 ? 'Getting your location...'
@@ -430,7 +414,7 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
       )}
 
       {requiresPeerConfirm && (
-        <div className="border border-gray-100 shadow-sm rounded-2xl p-4 mb-4 bg-white">
+        <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
           <h3 className="font-semibold mb-3">Peer Verification</h3>
           <p className="text-sm text-gray-600 mb-3">
             Scan your peer QR code or show your QR code to be scanned.
@@ -438,7 +422,7 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
           {peerWorldId ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-center gap-2 text-green-700">
-                <Check className="w-4 h-4" />
+                <span>✓</span>
                 <span className="text-sm font-semibold">Peer verified!</span>
               </div>
               <p className="text-xs text-green-600 mt-1">
@@ -452,7 +436,7 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
                 variant="secondary"
                 className="flex-1"
               >
-                Scan QR
+                🔍 Scan QR
               </Button>
               <Button
                 onClick={() => setShowMyQR(true)}
@@ -492,6 +476,24 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
         </div>
       )}
 
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+          <p className="text-red-700 text-sm">{errorMessage}</p>
+        </div>
+      )}
+
+      {cooldownRemaining ? (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2 text-yellow-700">
+            <span>⏰</span>
+            <span className="font-semibold">Quest on Cooldown</span>
+          </div>
+          <p className="text-sm text-yellow-600 mt-1">
+            You can complete this quest again in {cooldownRemaining} hours.
+          </p>
+        </div>
+      ) : null}
+
       <LiveFeedback
         label={{
           failed: 'Failed to complete quest',
@@ -526,11 +528,15 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
         </Button>
       </LiveFeedback>
 
-      {errorMessage && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 mt-3">
-          <p className="text-red-700 text-sm">{errorMessage}</p>
-        </div>
-      )}
+      <Button
+        onClick={() => router.push('/home')}
+        disabled={buttonState === 'pending'}
+        size="lg"
+        variant="secondary"
+        className="w-full mt-3"
+      >
+        Back to Quests
+      </Button>
     </div>
   );
 };

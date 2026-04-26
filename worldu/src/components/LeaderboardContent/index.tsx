@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { LeaderboardEntry } from '@/types/quest';
 import { Medal1st, Medal, Trophy } from 'iconoir-react';
 import { ReactNode } from 'react';
@@ -87,21 +86,23 @@ export const LeaderboardContent = () => {
     const podiumColors = ['#86efac', '#22c55e', '#dcfce7'];
 
     return (
-      <div className="flex items-end justify-center gap-2 mb-6 mt-2">
-        {order.map((idx, i) => {
-          const entry = top3[idx];
-          if (!entry) return <div key={i} className="flex-1" />;
-          const isMe = entry.userId === currentUserId;
-          return (
-            <div key={entry.userId} className="flex flex-col items-center flex-1">
-              <span className="mb-1 flex justify-center">{medalIcons[idx]}</span>
-              <p className={`text-xs font-semibold capitalize truncate max-w-full ${isMe ? 'text-green-600' : ''}`}>
-                {isMe ? 'You' : entry.username}
-              </p>
-              <p className="text-xs text-gray-500 mb-1">{entry.totalPoints} pts</p>
+      <div className="w-full space-y-2">
+        {data.map((entry) => (
+          <div
+            key={entry.userId}
+            className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-xl"
+          >
+            <div className="flex items-center gap-3">
               <div
-                className={`w-full ${heights[i]} rounded-t-xl flex items-center justify-center`}
-                style={{ backgroundColor: podiumColors[i] }}
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                  entry.rank === 1
+                    ? 'bg-yellow-400 text-yellow-900'
+                    : entry.rank === 2
+                    ? 'bg-gray-300 text-gray-700'
+                    : entry.rank === 3
+                    ? 'bg-orange-300 text-orange-800'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
               >
                 <span className="text-lg font-bold" style={{ color: '#000000' }}>{entry.rank}</span>
               </div>
@@ -140,15 +141,17 @@ export const LeaderboardContent = () => {
                   <p className="text-xs text-gray-400">{entry.completedQuests} quests</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={`font-bold text-sm ${isMe ? 'text-green-600' : 'text-gray-700'}`}>
-                  {entry.totalPoints}
-                </p>
-                <p className="text-xs text-gray-400">pts</p>
+              <div>
+                <p className="font-semibold capitalize">{entry.username}</p>
+                <p className="text-xs text-gray-500">{entry.completedQuests} quests</p>
               </div>
             </div>
-          );
-        })}
+            <div className="text-right">
+              <p className="font-bold text-green-600">{entry.totalPoints}</p>
+              <p className="text-xs text-gray-500">points</p>
+            </div>
+          </div>
+        ))}
       </div>
     );
   };

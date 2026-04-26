@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
@@ -10,62 +10,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --animate-fade-in: fade-in 0.6s ease-out;
-  --animate-slide-up: slide-up 0.4s ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* Green theme overrides */
-.bg-brand { background-color: #16a34a !important; }
-.bg-brand-medium { background-color: #22c55e !important; }
-.bg-brand-light { background-color: #86efac !important; }
-.bg-brand-lightest { background-color: #dcfce7 !important; }
-.bg-white-force { background-color: #ffffff !important; }
-.text-brand { color: #22c55e !important; }
-.text-brand-dark { color: #16a34a !important; }
-.text-black-force { color: #000000 !important; }
-.text-white-force { color: #ffffff !important; }
-.border-brand-light { border-color: #86efac !important; }
-
-.skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 8px;
 }

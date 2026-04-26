@@ -48,10 +48,16 @@ export const DAILY_QUESTS: Quest[] = [
     title: 'Attend campus event',
     description: 'Join a campus or community meetup',
     points: 40,
-    verificationType: 'qr_code',
-    instructions: 'Attend a campus or community event and scan the QR code to check in.',
+    verificationType: 'location',
+    instructions: 'Attend a campus or community event. Your location will be verified.',
     icon: '🎓',
     category: 'community',
+    targetLocation: {
+      latitude: 37.4275,
+      longitude: -122.1697,
+      radiusMeters: 500,
+      name: 'Stanford Campus',
+    },
   },
   {
     id: 'help-neighbor',
@@ -84,6 +90,12 @@ export const DAILY_QUESTS: Quest[] = [
     icon: '🌳',
     category: 'service',
     duration: 30,
+    targetLocation: {
+      latitude: 37.7749,
+      longitude: -122.4194,
+      radiusMeters: 1000,
+      name: 'Golden Gate Park',
+    },
   },
 ];
 

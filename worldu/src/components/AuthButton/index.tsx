@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 export const AuthButton = () => {
   const [isPending, setIsPending] = useState(false);
   const { isInstalled } = useMiniKit();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const onClick = useCallback(async () => {
     if (!isInstalled || isPending) {

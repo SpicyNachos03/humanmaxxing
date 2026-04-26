@@ -1,4 +1,18 @@
-export type VerificationType = 'selfie' | 'location' | 'photo' | 'timer' | 'qr_code' | 'peer_confirm' | 'location_time';
+export type VerificationType =
+  | "selfie"
+  | "location"
+  | "photo"
+  | "timer"
+  | "qr_code"
+  | "peer_confirm"
+  | "location_time";
+
+export interface QuestLocation {
+  latitude: number;
+  longitude: number;
+  radiusMeters: number; // allowed distance from target location
+  name?: string; // human-readable location name
+}
 
 export interface Quest {
   id: string;
@@ -9,7 +23,8 @@ export interface Quest {
   instructions: string;
   icon: string;
   duration?: number; // in minutes for timer-based quests
-  category: 'movement' | 'community' | 'mindfulness' | 'service' | 'discomfort';
+  category: "movement" | "community" | "mindfulness" | "service" | "discomfort";
+  targetLocation?: QuestLocation; // for location-based quests
 }
 
 export interface QuestSubmission {

@@ -1,32 +1,108 @@
+import connectDB from '@/lib/mongodb';
+import { User } from '@/models/User';
+import { BADGES } from '@/data/quests';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
+    await connectDB();
+    
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const walletAddress = searchParams.get('userId');
+    const username = searchParams.get('username');
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Missing userId' },
-        { status: 400 }
-      );
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
 
-    // In production, this would fetch from database
-    // Mock response for MVP
-    const userProgress = {
-      userId,
-      totalPoints: 350,
-      completedQuests: ['walk-10', 'meditate-no-phone'],
-      currentStreak: 3,
-      badges: [
-        { id: 'first-quest', name: 'First Steps', icon: '🎯', unlockedAt: '2026-04-20' },
-        { id: 'streak-3', name: 'On Fire', icon: '🔥', unlockedAt: '2026-04-23' },
-        { id: 'points-100', name: 'Century', icon: '💯', unlockedAt: '2026-04-22' },
-      ],
-    };
+    let user = await User.findOne({ walletAddress });
 
-    return NextResponse.json(userProgress);
+    if (!user) {
+      // Create new user if doesn't exist
+      user = await User.create({
+        walletAddress,
+        username: username || 'New User',
+        totalPoints: 0,
+        currentStreak: 0,
+        completedQuests: [],
+        badges: []
+      });
+    } else {
+      // Check and award badges for existing users
+      const newBadges = [];
+      const existingBadgeIds = user.badges.map(b => b.id);
+
+      // First Steps badge - complete first quest
+      if (!existingBadgeIds.includes('first-quest') && user.completedQuests.length >= 1) {
+        newBadges.push({
+          id: 'first-quest',
+          name: 'First Steps',
+          icon: '🎯',
+          unlockedAt: new Date()
+        });
+      }
+
+      // Century badge - earn 100 points
+      if (!existingBadgeIds.includes('points-100') && user.totalPoints >= 100) {
+        newBadges.push({
+          id: 'points-100',
+          name: 'Century',
+          icon: '💯',
+          unlockedAt: new Date()
+        });
+      }
+
+      // High Achiever badge - earn 500 points
+      if (!existingBadgeIds.includes('points-500') && user.totalPoints >= 500) {
+        newBadges.push({
+          id: 'points-500',
+          name: 'High Achiever',
+          icon: '🏆',
+          unlockedAt: new Date()
+        });
+      }
+
+      // On Fire badge - 3-day streak
+      if (!existingBadgeIds.includes('streak-3') && user.currentStreak >= 3) {
+        newBadges.push({
+          id: 'streak-3',
+          name: 'On Fire',
+          icon: '🔥',
+          unlockedAt: new Date()
+        });
+      }
+
+      // Unstoppable badge - 7-day streak
+      if (!existingBadgeIds.includes('streak-7') && user.currentStreak >= 7) {
+        newBadges.push({
+          id: 'streak-7',
+          name: 'Unstoppable',
+          icon: '⚡',
+          unlockedAt: new Date()
+        });
+      }
+
+      // Add new badges to user
+      if (newBadges.length > 0) {
+        user.badges.push(...newBadges);
+        await user.save();
+      }
+
+      // Update username if needed
+      if (username && (!user.username || user.username === 'New User')) {
+        user.username = username;
+        await user.save();
+      }
+    }
+
+    return NextResponse.json({
+      userId: user.walletAddress,
+      username: user.username,
+      totalPoints: user.totalPoints,
+      completedQuests: user.completedQuests,
+      currentStreak: user.currentStreak,
+      badges: user.badges
+    });
   } catch (error) {
     console.error('Error fetching user progress:', error);
     return NextResponse.json(

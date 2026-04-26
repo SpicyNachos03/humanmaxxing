@@ -4,6 +4,8 @@ import type { MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js/comm
 import { verifySiweMessage } from '@worldcoin/minikit-js/siwe';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import connectDB from '@/lib/mongodb';
+import { User } from '@/models/User';
 
 declare module 'next-auth' {
   interface User {
@@ -75,8 +77,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           console.log('Invalid final payload');
           return null;
         }
-        // Optionally, fetch the user info from your own database
+
+        // Fetch user info from World App
         const userInfo = await MiniKit.getUserInfo(finalPayload.address);
+
+        // Store or update user in MongoDB
+        try {
+          await connectDB();
+          const walletAddress = finalPayload.address;
+          
+          let user = await User.findOne({ walletAddress });
+          
+          if (!user) {
+            // Create new user
+            user = await User.create({
+              walletAddress,
+              username: userInfo.username || 'New User',
+              profilePictureUrl: userInfo.profilePictureUrl,
+              totalPoints: 0,
+              currentStreak: 0,
+              completedQuests: [],
+              badges: []
+            });
+          } else {
+            // Update existing user info, but preserve username if already set
+            if (!user.username || user.username === 'New User') {
+              user.username = userInfo.username || user.username;
+            }
+            if (userInfo.profilePictureUrl) {
+              user.profilePictureUrl = userInfo.profilePictureUrl;
+            }
+            await user.save();
+          }
+        } catch (error) {
+          console.error('Error storing user in MongoDB:', error);
+          // Continue auth even if DB fails
+        }
 
         return {
           id: finalPayload.address,

@@ -1,5 +1,8 @@
+import connectDB from '@/lib/mongodb';
+import { User } from '@/models/User';
+import { DAILY_QUESTS, BADGES } from '@/data/quests';
 import { NextRequest, NextResponse } from 'next/server';
-import { DAILY_QUESTS } from '@/data/quests';
+import { auth } from '@/auth';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -27,11 +30,22 @@ function calculateDistance(
 
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
+    
+    const session = await auth();
+    if (!session?.user?.walletAddress) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please authenticate first.' },
+        { status: 401 }
+      );
+    }
+    
     const body = await request.json();
-    const { questId, userId, proof, location, peerConfirmation } = body;
+    const { questId, proof, location, peerConfirmation } = body;
+    const userId = session.user.walletAddress;
 
-    // Validate required fields
-    if (!questId || !userId || !proof) {
+    // Validate required fields (proof is optional for self_report quests)
+    if (!questId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -47,8 +61,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Server-side location verification
-    const requiresLocation = ['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation;
+    // Server-side location verification (skip for self_report quests)
+    const requiresLocation = quest.verificationType !== 'self_report' && (['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation);
     
     if (requiresLocation) {
       if (!location || typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
@@ -81,36 +95,118 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // In production, this would:
-    // 1. Verify the proof (photo, location, etc.)
-    // 2. Check if user already completed this quest today
-    // 3. Award points to the user
-    // 4. Update user progress and badges
-    // 5. Store in database
+    // Check if user exists and if they already completed this quest
+    let user = await User.findOne({ walletAddress: userId });
+    
+    if (!user) {
+      // Create new user with initial points from this quest
+      const newBadges = [];
+      
+      // Award First Steps badge for first quest
+      newBadges.push({
+        id: 'first-quest',
+        name: 'First Steps',
+        icon: '🎯',
+        unlockedAt: new Date()
+      });
 
-    // Mock response for MVP
-    const submission = {
-      id: crypto.randomUUID(),
-      questId,
-      userId,
-      proof,
-      location,
-      peerConfirmation,
-      timestamp: new Date().toISOString(),
-      status: 'verified',
-      locationVerified: requiresLocation ? true : null,
-    };
+      user = await User.create({
+        walletAddress: userId,
+        username: 'New User',
+        totalPoints: quest.points,
+        currentStreak: 1,
+        completedQuests: [questId],
+        badges: newBadges
+      });
+      
+      return NextResponse.json({
+        success: true,
+        newTotal: user.totalPoints,
+        pointsEarned: quest.points,
+        message: 'Quest completed successfully'
+      });
+    }
 
-    // Simulate verification
-    setTimeout(() => {
-      // In production, this would trigger actual verification
-      console.log('Quest submission verified:', submission);
-    }, 0);
+    if (user.completedQuests.includes(questId)) {
+      return NextResponse.json(
+        { error: 'Quest already completed' },
+        { status: 400 }
+      );
+    }
+
+    // Update user with new quest completion and points
+    user.totalPoints += quest.points;
+    user.currentStreak += 1;
+    user.completedQuests.push(questId);
+
+    // Check and award badges
+    const newBadges = [];
+    const existingBadgeIds = user.badges.map(b => b.id);
+
+    // First Steps badge - complete first quest
+    if (!existingBadgeIds.includes('first-quest') && user.completedQuests.length === 1) {
+      newBadges.push({
+        id: 'first-quest',
+        name: 'First Steps',
+        icon: '🎯',
+        unlockedAt: new Date()
+      });
+    }
+
+    // Century badge - earn 100 points
+    if (!existingBadgeIds.includes('points-100') && user.totalPoints >= 100) {
+      newBadges.push({
+        id: 'points-100',
+        name: 'Century',
+        icon: '💯',
+        unlockedAt: new Date()
+      });
+    }
+
+    // High Achiever badge - earn 500 points
+    if (!existingBadgeIds.includes('points-500') && user.totalPoints >= 500) {
+      newBadges.push({
+        id: 'points-500',
+        name: 'High Achiever',
+        icon: '🏆',
+        unlockedAt: new Date()
+      });
+    }
+
+    // On Fire badge - 3-day streak
+    if (!existingBadgeIds.includes('streak-3') && user.currentStreak >= 3) {
+      newBadges.push({
+        id: 'streak-3',
+        name: 'On Fire',
+        icon: '🔥',
+        unlockedAt: new Date()
+      });
+    }
+
+    // Unstoppable badge - 7-day streak
+    if (!existingBadgeIds.includes('streak-7') && user.currentStreak >= 7) {
+      newBadges.push({
+        id: 'streak-7',
+        name: 'Unstoppable',
+        icon: '⚡',
+        unlockedAt: new Date()
+      });
+    }
+
+    // Add new badges to user
+    if (newBadges.length > 0) {
+      user.badges.push(...newBadges);
+    }
+
+    await user.save();
+
+    const updatedUser = user;
 
     return NextResponse.json({
       success: true,
-      submission,
-      message: 'Quest completed successfully',
+      newTotal: updatedUser?.totalPoints,
+      pointsEarned: quest.points,
+      message: 'Quest completed successfully'
     });
   } catch (error) {
     console.error('Error submitting quest:', error);

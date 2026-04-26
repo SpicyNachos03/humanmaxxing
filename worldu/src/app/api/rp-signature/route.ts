@@ -4,7 +4,12 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 const SIGNING_KEY = process.env.RP_SIGNING_KEY;
-const RP_ID = process.env.RP_ID ?? 'rp_e87d44dbb7b76d91';
+// Convert 0x address to rp_ format if needed
+const RP_ID = process.env.RP_ID 
+  ? process.env.RP_ID.startsWith('rp_') 
+    ? process.env.RP_ID 
+    : `rp_${process.env.RP_ID.slice(2)}`
+  : 'rp_e87d44dbb7b76d91';
 
 export async function POST(req: Request) {
   if (!SIGNING_KEY) {

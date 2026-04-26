@@ -6,6 +6,9 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useGeolocation, calculateDistance } from '@/hooks/useGeolocation';
+import { QRScanner } from '@/components/QRScanner';
+import { QRCodeDisplay } from '@/components/QRCodeDisplay';
+import { useSession } from 'next-auth/react';
 
 interface QuestDetailProps {
   quest: Quest;
@@ -13,14 +16,19 @@ interface QuestDetailProps {
 
 export const QuestDetail = ({ quest }: QuestDetailProps) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const [buttonState, setButtonState] = useState<'pending' | 'success' | 'failed' | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [peerWorldId, setPeerWorldId] = useState<string | null>(null);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showMyQR, setShowMyQR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { getCurrentPosition, loading: locationLoading } = useGeolocation();
 
   const requiresPhoto = ['photo', 'selfie', 'location', 'location_time'].includes(quest.verificationType);
   const requiresLocation = ['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation;
+  const requiresPeerConfirm = quest.verificationType === 'peer_confirm';
 
   const getVerificationLabel = () => {
     switch (quest.verificationType) {
@@ -54,12 +62,50 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
     }
   };
 
+  const handlePeerVerification = (qrData: string) => {
+    console.log('Scanned QR data:', qrData);
+    console.log('My wallet address:', session?.user?.walletAddress);
+
+    // Validate that the QR data is a valid Ethereum address
+    const isValidAddress = /^0x[a-fA-F0-9]{40}$/.test(qrData);
+    
+    if (!isValidAddress) {
+      setErrorMessage('Invalid QR code. Please scan a valid user QR code.');
+      return;
+    }
+
+    // Prevent scanning your own QR code
+    if (qrData.toLowerCase() === session?.user?.walletAddress?.toLowerCase()) {
+      setErrorMessage('You cannot scan your own QR code. Please scan a peer QR code.');
+      return;
+    }
+
+    setPeerWorldId(qrData);
+    setShowQRScanner(false);
+  };
+
+  const getMyPeerId = () => {
+    // Use wallet address as peer ID for QR code
+    return session?.user?.walletAddress || 'user-id';
+  };
+
   const handleCompleteQuest = async () => {
     setButtonState('pending');
     setErrorMessage(null);
 
     try {
       let userLocation: { latitude: number; longitude: number } | null = null;
+      let peerConfirmation: string | undefined;
+
+      // Get peer World ID if required
+      if (requiresPeerConfirm) {
+        if (!peerWorldId) {
+          setButtonState('failed');
+          setErrorMessage('Please verify your peer\'s World ID first');
+          return;
+        }
+        peerConfirmation = peerWorldId;
+      }
 
       // Get current location if required
       if (requiresLocation) {
@@ -122,19 +168,25 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
       }
 
       // Submit quest completion
+      const submissionData = {
+        questId: quest.id,
+        userId: session?.user?.walletAddress || 'current-user',
+        proof: photoPreview || 'completed',
+        location: userLocation,
+        peerConfirmation,
+      };
+      
+      console.log('Submitting quest with data:', submissionData);
+
       const response = await fetch('/api/quests/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questId: quest.id,
-          userId: 'current-user', // In production, get from session
-          proof: photoPreview || 'completed',
-          location: userLocation,
-        }),
+        body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit quest');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit quest');
       }
 
       setButtonState('success');
@@ -144,7 +196,7 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
     } catch (error) {
       console.error('Error completing quest:', error);
       setButtonState('failed');
-      setErrorMessage('Failed to complete quest. Please try again.');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to complete quest. Please try again.');
     }
   };
 
@@ -251,6 +303,69 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
         </div>
       )}
 
+      {requiresPeerConfirm && (
+        <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
+          <h3 className="font-semibold mb-3">Peer Verification</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Scan your peer QR code or show your QR code to be scanned.
+          </p>
+          {peerWorldId ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span className="text-sm font-semibold">Peer verified!</span>
+              </div>
+              <p className="text-xs text-green-600 mt-1">
+                Peer ID: {peerWorldId.slice(0, 8)}...{peerWorldId.slice(-4)}
+              </p>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowQRScanner(true)}
+                variant="secondary"
+                className="flex-1"
+              >
+                🔍 Scan QR
+              </Button>
+              <Button
+                onClick={() => setShowMyQR(true)}
+                variant="secondary"
+                className="flex-1"
+              >
+                Show My QR
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showQRScanner && (
+        <QRScanner
+          onScan={handlePeerVerification}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
+
+      {showMyQR && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Your QR Code</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Show this QR code to your peer so they can scan it.
+            </p>
+            <QRCodeDisplay value={getMyPeerId()} size={200} />
+            <Button
+              onClick={() => setShowMyQR(false)}
+              variant="secondary"
+              className="w-full mt-4"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
+
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
           <p className="text-red-700 text-sm">{errorMessage}</p>
@@ -268,12 +383,20 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
       >
         <Button
           onClick={handleCompleteQuest}
-          disabled={buttonState === 'pending' || (requiresPhoto && !photoPreview)}
+          disabled={
+            buttonState === 'pending' ||
+            (requiresPhoto && !photoPreview) ||
+            (requiresPeerConfirm && !peerWorldId)
+          }
           size="lg"
           variant="primary"
           className="w-full"
         >
-          {requiresPhoto && !photoPreview ? 'Take Photo First' : 'Complete Quest'}
+          {requiresPhoto && !photoPreview
+            ? 'Take Photo First'
+            : requiresPeerConfirm && !peerWorldId
+            ? 'Verify Peer First'
+            : 'Complete Quest'}
         </Button>
       </LiveFeedback>
 

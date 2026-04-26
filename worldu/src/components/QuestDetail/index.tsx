@@ -91,6 +91,36 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
         }
       }
 
+      // Verify photo with YOLO vision API if photo is required
+      if (requiresPhoto && photoPreview) {
+        try {
+          const visionResponse = await fetch('/api/vision/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              questId: quest.id,
+              imageBase64: photoPreview,
+            }),
+          });
+
+          const visionResult = await visionResponse.json();
+          console.log('Vision result:', visionResult);
+
+          if (!visionResult.verified && !visionResult.fallback) {
+            setButtonState('failed');
+            setErrorMessage(visionResult.message || 'Photo verification failed. Please take a photo that shows the required items.');
+            return;
+          }
+          
+          // Show success feedback with what was detected
+          if (visionResult.verified) {
+            console.log(`Verified: ${visionResult.strict_match_count}/${visionResult.required_count} items detected`);
+          }
+        } catch (visionError) {
+          console.warn('Vision API unavailable, proceeding without verification:', visionError);
+        }
+      }
+
       // Submit quest completion
       const response = await fetch('/api/quests/submit', {
         method: 'POST',

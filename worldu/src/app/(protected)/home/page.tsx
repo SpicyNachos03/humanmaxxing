@@ -25,7 +25,7 @@ export default async function Home() {
       <Page.Main className="flex flex-col items-center justify-start gap-4 mb-16">
         <div className="w-full">
           <p className="text-sm text-gray-600 mb-4">
-            HELLO HELLO HELLO Complete quests to earn points and unlock rewards. Get rewarded for being human again.
+            Complete quests to earn points and unlock rewards. Get rewarded for being human again.
           </p>
           <div className="flex flex-col gap-3">
             {DAILY_QUESTS.map((quest) => (

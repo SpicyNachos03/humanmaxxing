@@ -12,6 +12,19 @@ const medalIcons: ReactNode[] = [
   <Medal key="3rd" className="w-6 h-6 text-green-300" />,
 ];
 
+interface SquadEntry {
+  rank: number;
+  id: string;
+  name: string;
+  tag: string;
+  emoji: string;
+  bannerColor: string;
+  totalPoints: number;
+  weeklyPoints: number;
+  weeklyGoal: number;
+  memberCount: number;
+}
+
 const SkeletonRow = () => (
   <div className="flex items-center justify-between p-3 rounded-xl">
     <div className="flex items-center gap-3">
@@ -25,34 +38,53 @@ const SkeletonRow = () => (
   </div>
 );
 
+type Mode = 'players' | 'squads';
+type Range = 'all' | 'weekly';
+
 export const LeaderboardContent = () => {
   const { data: session } = useSession();
+  const [mode, setMode] = useState<Mode>('players');
+  const [range, setRange] = useState<Range>('all');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [squads, setSquads] = useState<SquadEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
+    let cancelled = false;
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const response = await fetch('/api/leaderboard');
-        const data = await response.json();
-        setLeaderboard(data.leaderboard || []);
+        if (mode === 'players') {
+          const response = await fetch('/api/leaderboard', { cache: 'no-store' });
+          const data = await response.json();
+          if (!cancelled) setLeaderboard(data.leaderboard || []);
+        } else {
+          const response = await fetch(`/api/squads/leaderboard?range=${range}`, {
+            cache: 'no-store',
+          });
+          const data = await response.json();
+          if (!cancelled) setSquads(data.leaderboard || []);
+        }
       } catch (error) {
         console.error('Error fetching leaderboard:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    fetchLeaderboard();
-  }, []);
+    fetchData();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, range]);
 
   const currentUserId = session?.user?.walletAddress;
 
   const renderPodium = (top3: LeaderboardEntry[]) => {
     if (top3.length === 0) return null;
-    const order = [1, 0, 2]; // silver, gold, bronze layout
+    const order = [1, 0, 2];
     const heights = ['h-20', 'h-28', 'h-16'];
-    const podiumColors = ['#86efac', '#22c55e', '#dcfce7']; // 2nd, 1st, 3rd
+    const podiumColors = ['#86efac', '#22c55e', '#dcfce7'];
 
     return (
       <div className="flex items-end justify-center gap-2 mb-6 mt-2">
@@ -80,7 +112,7 @@ export const LeaderboardContent = () => {
     );
   };
 
-  const renderList = (data: LeaderboardEntry[]) => {
+  const renderPlayersList = (data: LeaderboardEntry[]) => {
     const rest = data.slice(3);
     if (rest.length === 0) return null;
 
@@ -121,8 +153,107 @@ export const LeaderboardContent = () => {
     );
   };
 
+  const renderSquads = (data: SquadEntry[]) => {
+    if (data.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <p className="font-semibold text-gray-700 mb-1">No squads yet</p>
+          <p className="text-sm text-gray-400">Create one and invite your friends!</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full space-y-2">
+        {data.map((entry) => {
+          const points = range === 'weekly' ? entry.weeklyPoints : entry.totalPoints;
+          return (
+            <div
+              key={entry.id}
+              className="flex items-center justify-between p-3 rounded-xl border border-gray-100"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                  style={{ backgroundColor: entry.bannerColor }}
+                >
+                  {entry.rank}
+                </div>
+                <span className="text-2xl">{entry.emoji}</span>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm truncate">
+                    {entry.name}{' '}
+                    <span className="text-xs text-gray-400 uppercase">[{entry.tag}]</span>
+                  </p>
+                  <p className="text-xs text-gray-400">{entry.memberCount} members</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-sm text-gray-700">{points}</p>
+                <p className="text-xs text-gray-400">
+                  {range === 'weekly' ? 'this week' : 'total'}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full animate-fade-in">
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-full">
+          <button
+            onClick={() => setMode('players')}
+            className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
+              mode === 'players'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Players
+          </button>
+          <button
+            onClick={() => setMode('squads')}
+            className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
+              mode === 'squads'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Squads
+          </button>
+        </div>
+
+        {mode === 'squads' && (
+          <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-full">
+            <button
+              onClick={() => setRange('weekly')}
+              className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
+                range === 'weekly'
+                  ? 'bg-white text-green-700 shadow-sm border border-green-200'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Weekly
+            </button>
+            <button
+              onClick={() => setRange('all')}
+              className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
+                range === 'all'
+                  ? 'bg-white text-green-700 shadow-sm border border-green-200'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              All-time
+            </button>
+          </div>
+        )}
+      </div>
+
       {loading ? (
         <div className="space-y-3">
           <div className="w-40 h-5 skeleton mb-2" />
@@ -130,17 +261,26 @@ export const LeaderboardContent = () => {
             <SkeletonRow key={i} />
           ))}
         </div>
-      ) : leaderboard.length === 0 ? (
-        <div className="text-center py-12">
-          <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p className="font-semibold text-gray-700 mb-1">No one here yet</p>
-          <p className="text-sm text-gray-400">Complete quests to be the first on the leaderboard!</p>
-        </div>
+      ) : mode === 'players' ? (
+        leaderboard.length === 0 ? (
+          <div className="text-center py-12">
+            <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p className="font-semibold text-gray-700 mb-1">No one here yet</p>
+            <p className="text-sm text-gray-400">Complete quests to be the first on the leaderboard!</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-500 mb-2">Top humans worldwide</p>
+            {renderPodium(leaderboard.slice(0, 3))}
+            {renderPlayersList(leaderboard)}
+          </>
+        )
       ) : (
         <>
-          <p className="text-sm text-gray-500 mb-2">Top humans worldwide</p>
-          {renderPodium(leaderboard.slice(0, 3))}
-          {renderList(leaderboard)}
+          <p className="text-sm text-gray-500 mb-2">
+            {range === 'weekly' ? 'Top squads this week' : 'Top squads of all time'}
+          </p>
+          {renderSquads(squads)}
         </>
       )}
     </div>

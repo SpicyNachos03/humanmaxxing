@@ -21,6 +21,7 @@ export interface IUser extends Document {
     icon: string;
     unlockedAt: Date;
   }>;
+  squadId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +48,7 @@ const UserSchema = new Schema<IUser>(
       icon: String,
       unlockedAt: { type: Date, default: Date.now }
     }],
+    squadId: { type: String, default: null, index: true },
   },
   { timestamps: true }
 );

@@ -1,7 +1,7 @@
 'use client';
 
 import { TabItem, Tabs } from '@worldcoin/mini-apps-ui-kit-react';
-import { Home, Leaderboard, Medal } from 'iconoir-react';
+import { Home, Leaderboard, Medal, Group } from 'iconoir-react';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 
@@ -18,6 +18,7 @@ export const Navigation = () => {
 
   const getValueFromPath = () => {
     if (pathname === '/' || pathname === '/home' || pathname.startsWith('/quests')) return 'home';
+    if (pathname === '/squads' || pathname.startsWith('/squads')) return 'squads';
     if (pathname === '/leaderboard') return 'leaderboard';
     if (pathname === '/rewards') return 'rewards';
     return 'home';
@@ -27,6 +28,9 @@ export const Navigation = () => {
     switch (newValue) {
       case 'home':
         router.push('/home');
+        break;
+      case 'squads':
+        router.push('/squads');
         break;
       case 'leaderboard':
         router.push('/leaderboard');
@@ -40,6 +44,7 @@ export const Navigation = () => {
   return (
     <Tabs value={getValueFromPath()} onValueChange={handleTabChange}>
       <TabItem value="home" icon={<Home />} label="Quests" />
+      <TabItem value="squads" icon={<Group />} label="Squads" />
       <TabItem value="leaderboard" icon={<Leaderboard />} label="Leaderboard" />
       <TabItem value="rewards" icon={<Medal />} label="Rewards" />
     </Tabs>

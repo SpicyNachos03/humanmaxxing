@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { Page } from '@/components/PageLayout';
 import { DAILY_QUESTS } from '@/data/quests';
 import { QuestDetail } from '@/components/QuestDetail';
+import { BackButton } from '@/components/BackButton';
 import { Marble, TopBar } from '@worldcoin/mini-apps-ui-kit-react';
 import { notFound } from 'next/navigation';
 
@@ -23,6 +24,7 @@ export default async function QuestDetailPage({
       <Page.Header className="p-0">
         <TopBar
           title="Quest Details"
+          startAdornment={<BackButton />}
           endAdornment={
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold capitalize">

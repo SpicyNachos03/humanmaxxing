@@ -3,6 +3,19 @@
 import { BADGES } from '@/data/quests';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { Icon } from '@/components/Icon';
+import { CoffeeCup, Crown, Shirt, Medal, Gift, Check } from 'iconoir-react';
+import { ComponentType } from 'react';
+
+const REWARDS: { name: string; description: string; cost: number; IconComponent: ComponentType<{ className?: string }> }[] = [
+  { name: 'Campus Coffee', description: 'Free coffee at campus cafe', cost: 200, IconComponent: CoffeeCup },
+  { name: 'Event Priority', description: 'Skip the line at campus events', cost: 300, IconComponent: Crown },
+  { name: 'Exclusive Merch', description: 'WorldU branded t-shirt', cost: 500, IconComponent: Shirt },
+];
+
+const SkeletonBlock = ({ className }: { className: string }) => (
+  <div className={`skeleton ${className}`} />
+);
 
 export const RewardsContent = () => {
   const { data: session } = useSession();
@@ -33,61 +46,83 @@ export const RewardsContent = () => {
     fetchUserProgress();
   }, [session]);
 
+  const nextReward = REWARDS.find((r) => r.cost > userPoints);
+  const nextRewardCost = nextReward?.cost || REWARDS[REWARDS.length - 1].cost;
+  const progressToNext = nextReward
+    ? Math.min((userPoints / nextRewardCost) * 100, 100)
+    : 100;
+
   return (
-    <div className="w-full">
+    <div className="w-full animate-fade-in">
       {loading ? (
-        <p className="text-center text-gray-500">Loading rewards...</p>
+        <div className="space-y-4">
+          <SkeletonBlock className="w-full h-36 rounded-2xl" />
+          <SkeletonBlock className="w-32 h-5" />
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <SkeletonBlock key={i} className="w-full h-28 rounded-xl" />
+            ))}
+          </div>
+        </div>
       ) : (
         <>
           {/* Points Summary */}
-          <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
+          <div className="rounded-2xl p-5 mb-5 shadow-md bg-brand">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm text-gray-600">Welcome back,</p>
-                <p className="text-lg font-semibold capitalize">{username}</p>
+                <p className="text-xs font-medium text-white-force">Welcome back,</p>
+                <p className="text-lg font-bold capitalize text-black-force">{username}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Total Points</p>
-                <p className="text-3xl font-bold text-green-600">{userPoints}</p>
+                <p className="text-xs font-medium text-white-force">Total Points</p>
+                <p className="text-3xl font-bold text-black-force">{userPoints}</p>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Next Reward</p>
-                <p className="text-lg font-semibold">150 pts</p>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-white-force">
+                  {nextReward ? `Next: ${nextReward.name}` : 'All rewards unlocked!'}
+                </p>
+                <p className="text-xs font-medium text-white-force">
+                  {nextReward ? `${userPoints}/${nextRewardCost}` : ''}
+                </p>
               </div>
-            </div>
-            <div className="mt-3">
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }}>
                 <div
-                  className="bg-green-600 h-2 rounded-full"
-                  style={{ width: `${Math.min((userPoints / 500) * 100, 100)}%` }}
-                ></div>
+                  className="h-1.5 rounded-full transition-all duration-500 bg-white-force"
+                  style={{ width: `${progressToNext}%` }}
+                />
               </div>
-              <p className="text-xs text-gray-500 mt-1">{userPoints} / 500 to High Achiever badge</p>
             </div>
           </div>
 
           {/* Badges Section */}
-          <div>
-            <h2 className="text-lg font-semibold mb-3">Your Badges</h2>
+          <div className="mb-6">
+            <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+              <Medal className="w-5 h-5" /> Your Badges
+            </h2>
             <div className="grid grid-cols-2 gap-3">
               {BADGES.map((badge) => {
                 const isUnlocked = unlockedBadges.includes(badge.id);
                 return (
                   <div
                     key={badge.id}
-                    className={`border-2 rounded-xl p-4 text-center ${
+                    className={`rounded-xl p-4 text-center transition-all ${
                       isUnlocked
-                        ? 'border-green-300 bg-green-50'
-                        : 'border-gray-200 bg-gray-50 opacity-60'
+                        ? 'bg-green-50 border-2 border-green-300 shadow-sm'
+                        : 'bg-gray-50 border border-gray-100 opacity-50'
                     }`}
                   >
-                    <div className="text-4xl mb-2">{badge.icon}</div>
+                    <div className="mb-1.5 flex justify-center">
+                      <Icon name={badge.icon} className="w-8 h-8" />
+                    </div>
                     <h3 className="font-semibold text-sm">{badge.name}</h3>
-                    <p className="text-xs text-gray-600 mt-1">{badge.description}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{badge.description}</p>
                     {isUnlocked && (
-                      <p className="text-xs text-green-600 font-semibold mt-2">✓ Unlocked</p>
+                      <div className="flex items-center justify-center gap-1 mt-1.5">
+                        <Check className="w-3 h-3 text-green-600" />
+                        <p className="text-xs text-green-600 font-semibold">Unlocked</p>
+                      </div>
                     )}
                   </div>
                 );
@@ -96,54 +131,48 @@ export const RewardsContent = () => {
           </div>
 
           {/* Available Rewards */}
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-3">Available Rewards</h2>
+          <div>
+            <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+              <Gift className="w-5 h-5" /> Available Rewards
+            </h2>
             <div className="space-y-3">
-              <div className={`border-2 border-gray-200 rounded-xl p-4 flex items-center justify-between ${userPoints >= 200 ? '' : 'opacity-60'}`}>
-                <div>
-                  <p className="font-semibold">Campus Coffee</p>
-                  <p className="text-sm text-gray-600">Free coffee at campus cafe</p>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold ${userPoints >= 200 ? 'text-green-600' : 'text-gray-400'}`}>200 pts</p>
-                  <button 
-                    className={`text-xs px-3 py-1 rounded-full mt-1 ${userPoints >= 200 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'}`}
-                    disabled={userPoints < 200}
+              {REWARDS.map((reward) => {
+                const canRedeem = userPoints >= reward.cost;
+                return (
+                  <div
+                    key={reward.name}
+                    className={`border rounded-xl p-4 flex items-center justify-between transition-all ${
+                      canRedeem
+                        ? 'border-green-200 bg-green-50/50'
+                        : 'border-gray-100 opacity-60'
+                    }`}
                   >
-                    {userPoints >= 200 ? 'Redeem' : 'Locked'}
-                  </button>
-                </div>
-              </div>
-              <div className={`border-2 border-gray-200 rounded-xl p-4 flex items-center justify-between ${userPoints >= 300 ? '' : 'opacity-60'}`}>
-                <div>
-                  <p className="font-semibold">Event Priority</p>
-                  <p className="text-sm text-gray-600">Skip the line at campus events</p>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold ${userPoints >= 300 ? 'text-green-600' : 'text-gray-400'}`}>300 pts</p>
-                  <button 
-                    className={`text-xs px-3 py-1 rounded-full mt-1 ${userPoints >= 300 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'}`}
-                    disabled={userPoints < 300}
-                  >
-                    {userPoints >= 300 ? 'Redeem' : 'Locked'}
-                  </button>
-                </div>
-              </div>
-              <div className={`border-2 border-gray-200 rounded-xl p-4 flex items-center justify-between ${userPoints >= 500 ? '' : 'opacity-60'}`}>
-                <div>
-                  <p className="font-semibold">Exclusive Merch</p>
-                  <p className="text-sm text-gray-600">WorldU branded t-shirt</p>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold ${userPoints >= 500 ? 'text-green-600' : 'text-gray-400'}`}>500 pts</p>
-                  <button 
-                    className={`text-xs px-3 py-1 rounded-full mt-1 ${userPoints >= 500 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'}`}
-                    disabled={userPoints < 500}
-                  >
-                    {userPoints >= 500 ? 'Redeem' : 'Locked'}
-                  </button>
-                </div>
-              </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                        <reward.IconComponent className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{reward.name}</p>
+                        <p className="text-xs text-gray-500">{reward.description}</p>
+                      </div>
+                    </div>
+                    <div className="text-right ml-3 shrink-0">
+                      <p className={`font-bold text-sm ${canRedeem ? 'text-green-600' : 'text-gray-400'}`}>
+                        {reward.cost} pts
+                      </p>
+                      <span
+                        className={`inline-block text-xs px-3 py-1 rounded-full mt-1 font-medium ${
+                          canRedeem
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-200 text-gray-400'
+                        }`}
+                      >
+                        {canRedeem ? 'Coming Soon' : 'Locked'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </>

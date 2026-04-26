@@ -29,19 +29,19 @@ export async function POST(request: NextRequest) {
         {
           id: 'first-quest',
           name: 'First Steps',
-          icon: '🎯',
+          icon: 'dash-flag',
           unlockedAt: new Date('2026-04-20')
         },
         {
           id: 'streak-3',
           name: 'On Fire',
-          icon: '🔥',
+          icon: 'fire-flame',
           unlockedAt: new Date('2026-04-23')
         },
         {
           id: 'points-100',
           name: 'Century',
-          icon: '💯',
+          icon: 'star',
           unlockedAt: new Date('2026-04-22')
         }
       ]

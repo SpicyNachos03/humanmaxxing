@@ -1,12 +1,25 @@
 'use client';
 
 import { Quest } from '@/types/quest';
+import { Icon } from '@/components/Icon';
+import { Check } from 'iconoir-react';
 import { useRouter } from 'next/navigation';
 
 interface QuestCardProps {
   quest: Quest;
   completed?: boolean;
 }
+
+const verificationLabels: Record<string, string> = {
+  self_report: 'Quick',
+  photo: 'Photo',
+  location: 'Location',
+  location_time: 'Location',
+  timer: 'Timer',
+  qr_code: 'QR Code',
+  peer_confirm: 'Peer',
+  selfie: 'Selfie',
+};
 
 export const QuestCard = ({ quest, completed = false }: QuestCardProps) => {
   const router = useRouter();
@@ -17,27 +30,48 @@ export const QuestCard = ({ quest, completed = false }: QuestCardProps) => {
 
   return (
     <div
-      className="w-full border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 transition-colors"
+      className={`w-full rounded-xl p-4 cursor-pointer transition-all active:scale-[0.98] border-2 border-brand-light ${
+        completed ? 'bg-brand-lightest opacity-75' : 'bg-white-force hover:shadow-md'
+      }`}
       onClick={handleClick}
     >
       <div className="flex flex-row items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{quest.icon}</span>
-          <h3 className="font-semibold text-lg">{quest.title}</h3>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-brand-lightest flex items-center justify-center">
+            <span className="text-brand"><Icon name={quest.icon} className="w-5 h-5" /></span>
+          </div>
+          <h3 className={`font-semibold text-base ${completed ? 'line-through text-gray-400' : ''}`}>
+            {quest.title}
+          </h3>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-sm font-bold text-green-600">+{quest.points}</span>
-          <span className="text-xs text-gray-500">pts</span>
+          {completed ? (
+            <span className="text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 bg-brand-light text-black-force">
+              <Check className="w-3 h-3" /> Done
+            </span>
+          ) : (
+            <>
+              <span className="text-sm font-bold text-brand">+{quest.points}</span>
+              <span className="text-xs text-gray-400">pts</span>
+            </>
+          )}
         </div>
       </div>
-      <p className="text-sm text-gray-600 mb-3">{quest.description}</p>
-      <div className="flex items-center justify-between">
-        <span className="text-xs px-2 py-1 bg-gray-100 rounded-full capitalize">
+      <p className={`text-sm mb-3 ${completed ? 'text-gray-400' : 'text-gray-500'}`}>
+        {quest.description}
+      </p>
+      <div className="flex items-center gap-2">
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize bg-brand-medium text-white-force">
           {quest.category}
         </span>
-        {completed && (
-          <span className="text-xs text-green-600 font-semibold">✓ Completed</span>
+        {quest.duration && (
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-lightest text-brand-dark">
+            {quest.duration} min
+          </span>
         )}
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-lightest text-brand-dark">
+          {verificationLabels[quest.verificationType] || 'Verify'}
+        </span>
       </div>
     </div>
   );

@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
-import { Camera } from 'iconoir-react';
 import { BrowserMultiFormatReader } from '@zxing/library';
 
 interface QRScannerProps {
@@ -99,7 +98,7 @@ export const QRScanner = ({ onScan, onClose }: QRScannerProps) => {
               </div>
             )}
             <Button onClick={handleStartScan} variant="primary" className="w-full">
-              Start Camera
+              📷 Start Camera
             </Button>
             <Button onClick={onClose} variant="secondary" className="w-full">
               Cancel

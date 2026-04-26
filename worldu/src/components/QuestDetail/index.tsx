@@ -2,7 +2,7 @@
 
 import { Quest } from '@/types/quest';
 import { Button, LiveFeedback } from '@worldcoin/mini-apps-ui-kit-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useGeolocation, calculateDistance } from '@/hooks/useGeolocation';
@@ -23,12 +23,36 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
   const [peerWorldId, setPeerWorldId] = useState<string | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showMyQR, setShowMyQR] = useState(false);
+  const [showTimer, setShowTimer] = useState(false);
+  const [timerValue, setTimerValue] = useState(30);
+  const [timerComplete, setTimerComplete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { getCurrentPosition, loading: locationLoading } = useGeolocation();
 
   const requiresPhoto = ['photo', 'selfie', 'location', 'location_time'].includes(quest.verificationType);
   const requiresLocation = ['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation;
   const requiresPeerConfirm = quest.verificationType === 'peer_confirm';
+  const isWalkQuest = quest.id === 'walk-10';
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (showTimer && timerValue > 0) {
+      interval = setInterval(() => {
+        setTimerValue((prev) => prev - 1);
+      }, 1000);
+    } else if (timerValue === 0) {
+      setTimerComplete(true);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showTimer, timerValue]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const getVerificationLabel = () => {
     switch (quest.verificationType) {
@@ -303,6 +327,43 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
         </div>
       )}
 
+      {isWalkQuest && !showTimer && !timerComplete && (
+        <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
+          <h3 className="font-semibold mb-3">Walk Timer</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Start the timer when you begin your walk. Wait for it to complete before finishing the quest.
+          </p>
+          <Button
+            onClick={() => setShowTimer(true)}
+            variant="secondary"
+            className="w-full"
+          >
+            Start 30-Second Timer
+          </Button>
+        </div>
+      )}
+
+      {isWalkQuest && showTimer && !timerComplete && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-4 text-center">
+          <h3 className="font-semibold mb-4 text-yellow-800">Walk in Progress</h3>
+          <div className="text-6xl font-mono font-bold text-yellow-900 mb-4">
+            {formatTime(timerValue)}
+          </div>
+          <p className="text-sm text-yellow-700">
+            Complete your walk while the timer counts down
+          </p>
+        </div>
+      )}
+
+      {isWalkQuest && timerComplete && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2 text-green-700">
+            <span>✓</span>
+            <span className="text-sm font-semibold">Timer complete! You can now finish your quest.</span>
+          </div>
+        </div>
+      )}
+
       {requiresPeerConfirm && (
         <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
           <h3 className="font-semibold mb-3">Peer Verification</h3>
@@ -386,7 +447,8 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
           disabled={
             buttonState === 'pending' ||
             (requiresPhoto && !photoPreview) ||
-            (requiresPeerConfirm && !peerWorldId)
+            (requiresPeerConfirm && !peerWorldId) ||
+            (isWalkQuest && !timerComplete)
           }
           size="lg"
           variant="primary"
@@ -396,6 +458,8 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
             ? 'Take Photo First'
             : requiresPeerConfirm && !peerWorldId
             ? 'Verify Peer First'
+            : isWalkQuest && !timerComplete
+            ? 'Complete Timer First'
             : 'Complete Quest'}
         </Button>
       </LiveFeedback>

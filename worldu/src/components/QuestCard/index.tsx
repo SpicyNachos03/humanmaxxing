@@ -1,8 +1,6 @@
 'use client';
 
 import { Quest } from '@/types/quest';
-import { Icon } from '@/components/Icon';
-import { Check } from 'iconoir-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -71,42 +69,30 @@ export const QuestCard = ({
       aria-disabled={isLocked}
     >
       <div className="flex flex-row items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-lightest flex items-center justify-center">
-            <span className="text-brand"><Icon name={quest.icon} className="w-5 h-5" /></span>
-          </div>
-          <h3 className={`font-semibold text-base ${completed ? 'line-through text-gray-400' : ''}`}>
-            {quest.title}
-          </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{quest.icon}</span>
+          <h3 className="font-semibold text-lg">{quest.title}</h3>
         </div>
         <div className="flex items-center gap-1">
-          {completed ? (
-            <span className="text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 bg-brand-light text-black-force">
-              <Check className="w-3 h-3" /> Done
-            </span>
-          ) : (
-            <>
-              <span className="text-sm font-bold text-brand">+{quest.points}</span>
-              <span className="text-xs text-gray-400">pts</span>
-            </>
-          )}
+          <span className="text-sm font-bold text-green-600">+{quest.points}</span>
+          <span className="text-xs text-gray-500">pts</span>
         </div>
       </div>
-      <p className={`text-sm mb-3 ${completed ? 'text-gray-400' : 'text-gray-500'}`}>
-        {quest.description}
-      </p>
-      <div className="flex items-center gap-2">
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize bg-brand-medium text-white-force">
+      <p className="text-sm text-gray-600 mb-3">{quest.description}</p>
+      <div className="flex items-center justify-between">
+        <span className="text-xs px-2 py-1 bg-gray-100 rounded-full capitalize">
           {quest.category}
         </span>
-        {quest.duration && (
-          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-lightest text-brand-dark">
-            {quest.duration} min
+        {onCooldown ? (
+          <span className="text-xs text-yellow-600 font-semibold">
+            ✓ Completed - resets in {cooldownHoursRemaining ?? 24}h
           </span>
+        ) : completed ? (
+          <span className="text-xs text-green-600 font-semibold">✓ Completed</span>
+        ) : null}
+        {accepting && (
+          <span className="text-xs text-gray-500">Accepting...</span>
         )}
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-lightest text-brand-dark">
-          {verificationLabels[quest.verificationType] || 'Verify'}
-        </span>
       </div>
       {errorMessage && (
         <p className="text-xs text-yellow-700 mt-2">{errorMessage}</p>

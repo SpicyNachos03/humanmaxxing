@@ -4,7 +4,12 @@ import { DAILY_QUESTS } from '@/data/quests';
 import { QuestDetail } from '@/components/QuestDetail';
 import { BackButton } from '@/components/BackButton';
 import { Marble, TopBar } from '@worldcoin/mini-apps-ui-kit-react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import connectDB from '@/lib/mongodb';
+import { User } from '@/models/User';
+import { getQuestCooldownRemainingHours } from '@/lib/questCooldown';
+
+export const dynamic = 'force-dynamic';
 
 export default async function QuestDetailPage({
   params,
@@ -17,6 +22,28 @@ export default async function QuestDetailPage({
 
   if (!quest) {
     notFound();
+  }
+
+  // Server-side cooldown gate: redirect home if user already completed
+  // this quest within the cooldown window.
+  if (session?.user?.walletAddress) {
+    try {
+      await connectDB();
+      const user = await User.findOne({ walletAddress: session.user.walletAddress });
+      const remaining = getQuestCooldownRemainingHours(
+        quest.id,
+        user?.questCompletions
+      );
+      if (remaining !== null) {
+        redirect('/home');
+      }
+    } catch (error) {
+      // `redirect()` throws internally; rethrow so Next handles it.
+      if ((error as { digest?: string })?.digest?.startsWith?.('NEXT_REDIRECT')) {
+        throw error;
+      }
+      console.error('Error checking quest cooldown on server:', error);
+    }
   }
 
   return (

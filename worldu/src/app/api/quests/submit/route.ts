@@ -3,6 +3,10 @@ import { User } from '@/models/User';
 import { DAILY_QUESTS, BADGES } from '@/data/quests';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import {
+  getQuestCooldownEnd,
+  getQuestCooldownRemainingHours,
+} from '@/lib/questCooldown';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -31,7 +35,7 @@ function calculateDistance(
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    
+
     const session = await auth();
     if (!session?.user?.walletAddress) {
       return NextResponse.json(
@@ -39,12 +43,11 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const body = await request.json();
-    const { questId, proof, location, peerConfirmation } = body;
+    const { questId, location, peerConfirmation } = body;
     const userId = session.user.walletAddress;
 
-    // Validate required fields (proof is optional for self_report quests)
     if (!questId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -52,7 +55,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find the quest to verify location requirements
     const quest = DAILY_QUESTS.find((q) => q.id === questId);
     if (!quest) {
       return NextResponse.json(
@@ -62,17 +64,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Server-side location verification (skip for self_report quests)
-    const requiresLocation = quest.verificationType !== 'self_report' && (['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation);
+    const requiresLocation = !quest.verificationTypes.includes('self_report') && (quest.verificationTypes.includes('location') || quest.targetLocation);
     
     if (requiresLocation) {
-      if (!location || typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
+      if (
+        !location ||
+        typeof location.latitude !== 'number' ||
+        typeof location.longitude !== 'number'
+      ) {
         return NextResponse.json(
           { error: 'Location is required for this quest' },
           { status: 400 }
         );
       }
 
-      // Verify against target location if defined
       if (quest.targetLocation) {
         const distance = calculateDistance(
           location.latitude,
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
 
         if (distance > quest.targetLocation.radiusMeters) {
           return NextResponse.json(
-            { 
+            {
               error: 'Location verification failed',
               message: `You are ${(distance / 1000).toFixed(1)}km away from the quest location. Please move closer.`,
               distance,
@@ -95,9 +100,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if user exists and if they already completed this quest
     let user = await User.findOne({ walletAddress: userId });
-    
+
     if (!user) {
       // Create new user with initial points from this quest
       const newBadges = [];
@@ -116,28 +120,59 @@ export async function POST(request: NextRequest) {
         totalPoints: quest.points,
         currentStreak: 1,
         completedQuests: [questId],
+        questCompletions: [
+          {
+            questId,
+            completedAt: new Date(),
+          },
+        ],
         badges: newBadges
       });
-      
+
       return NextResponse.json({
         success: true,
         newTotal: user.totalPoints,
         pointsEarned: quest.points,
-        message: 'Quest completed successfully'
+        message: 'Quest completed successfully',
       });
     }
 
-    if (user.completedQuests.includes(questId)) {
+    // Enforce 24h cooldown based on the latest completion timestamp
+    const hoursRemaining = getQuestCooldownRemainingHours(
+      questId,
+      user.questCompletions
+    );
+    if (hoursRemaining !== null) {
+      const cooldownEnd = getQuestCooldownEnd(questId, user.questCompletions);
       return NextResponse.json(
-        { error: 'Quest already completed' },
+        {
+          error: 'Quest on cooldown',
+          message: `You can complete this quest again in ${hoursRemaining} hour${hoursRemaining === 1 ? '' : 's'}`,
+          hoursRemaining,
+          cooldownEnd,
+        },
         { status: 400 }
       );
     }
 
-    // Update user with new quest completion and points
     user.totalPoints += quest.points;
     user.currentStreak += 1;
-    user.completedQuests.push(questId);
+    if (!user.completedQuests.includes(questId)) {
+      user.completedQuests.push(questId);
+    }
+
+    // Persist latest completion timestamp per quest for cooldown checks.
+    if (!user.questCompletions) {
+      user.questCompletions = [];
+    }
+    user.questCompletions = user.questCompletions.filter(
+      (qc: { questId: string }) => qc.questId !== questId
+    );
+    user.questCompletions.push({
+      questId,
+      completedAt: new Date(),
+    });
+    user.markModified('questCompletions');
 
     // Check and award badges
     const newBadges = [];
@@ -200,13 +235,13 @@ export async function POST(request: NextRequest) {
 
     await user.save();
 
-    const updatedUser = user;
+    await user.save();
 
     return NextResponse.json({
       success: true,
-      newTotal: updatedUser?.totalPoints,
+      newTotal: user.totalPoints,
       pointsEarned: quest.points,
-      message: 'Quest completed successfully'
+      message: 'Quest completed successfully',
     });
   } catch (error) {
     console.error('Error submitting quest:', error);

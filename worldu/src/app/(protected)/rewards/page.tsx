@@ -2,6 +2,15 @@ import { auth } from '@/auth';
 import { Page } from '@/components/PageLayout';
 import { RewardsContent } from '@/components/RewardsContent';
 import { Marble, TopBar } from '@worldcoin/mini-apps-ui-kit-react';
+import { Suspense } from 'react';
+
+function RewardsLoading() {
+  return (
+    <div className="w-full flex items-center justify-center py-8">
+      <p className="text-gray-500">Loading rewards...</p>
+    </div>
+  );
+}
 
 export default async function RewardsPage() {
   const session = await auth();
@@ -10,7 +19,7 @@ export default async function RewardsPage() {
     <>
       <Page.Header className="p-0">
         <TopBar
-          title="Rewards & Badges"
+          title="Rewards"
           endAdornment={
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold capitalize">
@@ -22,7 +31,9 @@ export default async function RewardsPage() {
         />
       </Page.Header>
       <Page.Main className="flex flex-col items-center justify-start gap-4 mb-16">
-        <RewardsContent />
+        <Suspense fallback={<RewardsLoading />}>
+          <RewardsContent />
+        </Suspense>
       </Page.Main>
     </>
   );

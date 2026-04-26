@@ -1,5 +1,6 @@
 import connectDB from '@/lib/mongodb';
 import { User } from '@/models/User';
+import { Squad } from '@/models/Squad';
 import { DAILY_QUESTS, BADGES } from '@/data/quests';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
@@ -7,6 +8,7 @@ import {
   getQuestCooldownEnd,
   getQuestCooldownRemainingHours,
 } from '@/lib/questCooldown';
+import { resetWeeklyIfExpired, SQUAD_WEEKLY_BONUS_PER_MEMBER } from '@/lib/squads';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -233,7 +235,75 @@ export async function POST(request: NextRequest) {
       user.badges.push(...newBadges);
     }
 
-    await user.save();
+    // Update squad contribution + check weekly goal
+    let squadUpdate: {
+      squadName: string;
+      weeklyPoints: number;
+      weeklyGoal: number;
+      goalHit: boolean;
+      bonusEarned?: number;
+    } | null = null;
+
+    if (user.squadId) {
+      try {
+        const squad = await Squad.findById(user.squadId);
+        if (squad) {
+          resetWeeklyIfExpired(squad);
+
+          const member = squad.members.find(
+            (m) => m.walletAddress === user.walletAddress
+          );
+          if (member) {
+            member.contributedPoints += quest.points;
+            member.weeklyContributedPoints += quest.points;
+            member.lastContributionAt = new Date();
+          }
+
+          squad.totalPoints += quest.points;
+          squad.weeklyPoints += quest.points;
+
+          let goalHit = false;
+          let bonusEarned = 0;
+
+          // Each time the squad crosses a multiple of the weekly goal, every
+          // member gets a bonus. `weeklyGoalsHit` tracks how many tiers were
+          // already paid out this week.
+          const newGoalsHit = Math.floor(
+            squad.weeklyPoints / Math.max(1, squad.weeklyGoal)
+          );
+          if (newGoalsHit > squad.weeklyGoalsHit) {
+            squad.weeklyGoalsHit = newGoalsHit;
+            goalHit = true;
+            bonusEarned = SQUAD_WEEKLY_BONUS_PER_MEMBER;
+
+            const bonusOps = squad.members.map((m) =>
+              User.updateOne(
+                { walletAddress: m.walletAddress },
+                { $inc: { totalPoints: SQUAD_WEEKLY_BONUS_PER_MEMBER } }
+              )
+            );
+            await Promise.all(bonusOps);
+
+            user.totalPoints += SQUAD_WEEKLY_BONUS_PER_MEMBER;
+          }
+
+          await squad.save();
+
+          squadUpdate = {
+            squadName: squad.name,
+            weeklyPoints: squad.weeklyPoints,
+            weeklyGoal: squad.weeklyGoal,
+            goalHit,
+            ...(goalHit ? { bonusEarned } : {}),
+          };
+        } else {
+          // Stale squadId — clear it.
+          user.squadId = undefined;
+        }
+      } catch (squadError) {
+        console.error('Error updating squad progress:', squadError);
+      }
+    }
 
     await user.save();
 
@@ -242,6 +312,7 @@ export async function POST(request: NextRequest) {
       newTotal: user.totalPoints,
       pointsEarned: quest.points,
       message: 'Quest completed successfully',
+      squad: squadUpdate,
     });
   } catch (error) {
     console.error('Error submitting quest:', error);

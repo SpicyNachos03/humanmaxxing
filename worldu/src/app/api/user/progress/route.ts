@@ -37,8 +37,10 @@ export async function GET(request: NextRequest) {
       username: user.username,
       totalPoints: user.totalPoints,
       completedQuests: user.completedQuests,
+      questCompletions: user.questCompletions || [],
+      questAcceptances: user.questAcceptances || [],
       currentStreak: user.currentStreak,
-      badges: user.badges
+      badges: user.badges,
     });
   } catch (error) {
     console.error('Error fetching user progress:', error);

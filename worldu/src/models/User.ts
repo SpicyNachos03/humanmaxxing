@@ -7,6 +7,14 @@ export interface IUser extends Document {
   totalPoints: number;
   currentStreak: number;
   completedQuests: string[];
+  questAcceptances: Array<{
+    questId: string;
+    acceptedAt: Date;
+  }>;
+  questCompletions: Array<{
+    questId: string;
+    completedAt: Date;
+  }>;
   badges: Array<{
     id: string;
     name: string;
@@ -25,6 +33,14 @@ const UserSchema = new Schema<IUser>(
     totalPoints: { type: Number, default: 0 },
     currentStreak: { type: Number, default: 0 },
     completedQuests: [{ type: String }],
+    questAcceptances: [{
+      questId: { type: String, required: true },
+      acceptedAt: { type: Date, required: true }
+    }],
+    questCompletions: [{
+      questId: { type: String, required: true },
+      completedAt: { type: Date, required: true }
+    }],
     badges: [{
       id: String,
       name: String,

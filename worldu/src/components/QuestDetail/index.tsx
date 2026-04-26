@@ -24,6 +24,7 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
   const [peerWorldId, setPeerWorldId] = useState<string | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showMyQR, setShowMyQR] = useState(false);
+  const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null);
   const [showTimer, setShowTimer] = useState(false);
   const [timerValue, setTimerValue] = useState(30);
   const [timerComplete, setTimerComplete] = useState(false);
@@ -506,6 +507,7 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
           onClick={handleCompleteQuest}
           disabled={
             buttonState === 'pending' ||
+            cooldownRemaining !== null ||
             (requiresPhoto && !photoPreview) ||
             (requiresPeerConfirm && !peerWorldId) ||
             (requiresTimer && !timerComplete)
@@ -516,6 +518,8 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
         >
           {requiresPhoto && !photoPreview
             ? 'Take Photo First'
+            : cooldownRemaining !== null
+            ? `On Cooldown (${cooldownRemaining}h)`
             : requiresPeerConfirm && !peerWorldId
             ? 'Verify Peer First'
             : requiresTimer && !timerComplete

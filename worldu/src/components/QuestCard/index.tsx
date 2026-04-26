@@ -8,12 +8,14 @@ interface QuestCardProps {
   quest: Quest;
   completed?: boolean;
   onCooldown?: boolean;
+  cooldownHoursRemaining?: number | null;
 }
 
 export const QuestCard = ({
   quest,
   completed = false,
   onCooldown = false,
+  cooldownHoursRemaining = null,
 }: QuestCardProps) => {
   const router = useRouter();
   const [accepting, setAccepting] = useState(false);
@@ -83,7 +85,7 @@ export const QuestCard = ({
         </span>
         {onCooldown ? (
           <span className="text-xs text-yellow-600 font-semibold">
-            ✓ Completed — resets in 24h
+            ✓ Completed - resets in {cooldownHoursRemaining ?? 24}h
           </span>
         ) : completed ? (
           <span className="text-xs text-green-600 font-semibold">✓ Completed</span>

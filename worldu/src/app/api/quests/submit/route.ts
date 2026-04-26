@@ -120,6 +120,12 @@ export async function POST(request: NextRequest) {
         totalPoints: quest.points,
         currentStreak: 1,
         completedQuests: [questId],
+        questCompletions: [
+          {
+            questId,
+            completedAt: new Date(),
+          },
+        ],
         badges: newBadges
       });
 
@@ -151,7 +157,22 @@ export async function POST(request: NextRequest) {
 
     user.totalPoints += quest.points;
     user.currentStreak += 1;
-    user.completedQuests.push(questId);
+    if (!user.completedQuests.includes(questId)) {
+      user.completedQuests.push(questId);
+    }
+
+    // Persist latest completion timestamp per quest for cooldown checks.
+    if (!user.questCompletions) {
+      user.questCompletions = [];
+    }
+    user.questCompletions = user.questCompletions.filter(
+      (qc: { questId: string }) => qc.questId !== questId
+    );
+    user.questCompletions.push({
+      questId,
+      completedAt: new Date(),
+    });
+    user.markModified('questCompletions');
 
     // Check and award badges
     const newBadges = [];

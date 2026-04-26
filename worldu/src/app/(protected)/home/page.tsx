@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { Page } from '@/components/PageLayout';
-import { QuestCard } from '@/components/QuestCard';
+import { HomeContent } from '@/components/HomeContent';
 import { DAILY_QUESTS } from '@/data/quests';
 import { Marble, TopBar } from '@worldcoin/mini-apps-ui-kit-react';
 import connectDB from '@/lib/mongodb';

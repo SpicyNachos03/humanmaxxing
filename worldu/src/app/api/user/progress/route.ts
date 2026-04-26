@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         newBadges.push({
           id: 'first-quest',
           name: 'First Steps',
-          icon: '🎯',
+          icon: 'dash-flag',
           unlockedAt: new Date()
         });
       }
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         newBadges.push({
           id: 'points-100',
           name: 'Century',
-          icon: '💯',
+          icon: 'star',
           unlockedAt: new Date()
         });
       }
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         newBadges.push({
           id: 'points-500',
           name: 'High Achiever',
-          icon: '🏆',
+          icon: 'trophy',
           unlockedAt: new Date()
         });
       }
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
         newBadges.push({
           id: 'streak-3',
           name: 'On Fire',
-          icon: '🔥',
+          icon: 'fire-flame',
           unlockedAt: new Date()
         });
       }
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         newBadges.push({
           id: 'streak-7',
           name: 'Unstoppable',
-          icon: '⚡',
+          icon: 'flash',
           unlockedAt: new Date()
         });
       }

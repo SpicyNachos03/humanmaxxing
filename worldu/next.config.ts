@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins,
   reactStrictMode: false,
+  experimental: {
+    optimizePackageImports: ['iconoir-react'],
+  },
 };
 
 export default nextConfig;

@@ -1,7 +1,12 @@
+import connectDB from '@/lib/mongodb';
+import { User } from '@/models/User';
+import { DAILY_QUESTS } from '@/data/quests';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
+    
     const body = await request.json();
     const { questId, userId, proof, location, peerConfirmation } = body;
 
@@ -13,35 +18,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In production, this would:
-    // 1. Verify the proof (photo, location, etc.)
-    // 2. Check if user already completed this quest today
-    // 3. Award points to the user
-    // 4. Update user progress and badges
-    // 5. Store in database
+    const quest = DAILY_QUESTS.find(q => q.id === questId);
+    if (!quest) {
+      return NextResponse.json({ error: 'Invalid quest' }, { status: 400 });
+    }
 
-    // Mock response for MVP
-    const submission = {
-      id: crypto.randomUUID(),
-      questId,
-      userId,
-      proof,
-      location,
-      peerConfirmation,
-      timestamp: new Date().toISOString(),
-      status: 'pending',
-    };
+    // Check if user already completed this quest
+    const user = await User.findOne({ walletAddress: userId });
+    if (user && user.completedQuests.includes(questId)) {
+      return NextResponse.json(
+        { error: 'Quest already completed' },
+        { status: 400 }
+      );
+    }
 
-    // Simulate verification
-    setTimeout(() => {
-      // In production, this would trigger actual verification
-      console.log('Verifying quest submission:', submission);
-    }, 0);
+    // Update user with new quest completion and points
+    const updatedUser = await User.findOneAndUpdate(
+      { walletAddress: userId },
+      {
+        $inc: { totalPoints: quest.points, currentStreak: 1 },
+        $addToSet: { completedQuests: questId }
+      },
+      { upsert: true, new: true }
+    );
 
     return NextResponse.json({
       success: true,
-      submission,
-      message: 'Quest submitted for verification',
+      newTotal: updatedUser?.totalPoints,
+      pointsEarned: quest.points,
+      message: 'Quest completed successfully'
     });
   } catch (error) {
     console.error('Error submitting quest:', error);

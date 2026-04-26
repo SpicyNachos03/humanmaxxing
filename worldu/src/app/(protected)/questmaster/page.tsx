@@ -1,19 +1,18 @@
 import { auth } from '@/auth';
 import { Page } from '@/components/PageLayout';
-import { DAILY_QUESTS } from '@/data/quests';
+import { QuestMasterChat } from '@/components/QuestMaster';
 import { Marble, TopBar } from '@worldcoin/mini-apps-ui-kit-react';
-import { HomeContent } from './HomeContent';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Home() {
+export default async function QuestMasterPage() {
   const session = await auth();
 
   return (
     <>
       <Page.Header className="p-0">
         <TopBar
-          title="Daily Quests"
+          title="Quest Master"
           endAdornment={
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold capitalize">
@@ -24,8 +23,8 @@ export default async function Home() {
           }
         />
       </Page.Header>
-      <Page.Main className="flex flex-col items-center justify-start gap-4 mb-16">
-        <HomeContent quests={DAILY_QUESTS} />
+      <Page.Main className="flex flex-col p-0 mb-16">
+        <QuestMasterChat />
       </Page.Main>
     </>
   );

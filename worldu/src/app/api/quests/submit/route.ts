@@ -9,6 +9,7 @@ import {
   getQuestCooldownRemainingHours,
 } from '@/lib/questCooldown';
 import { resetWeeklyIfExpired, SQUAD_WEEKLY_BONUS_PER_MEMBER } from '@/lib/squads';
+import { logCompletion } from '@/lib/questOrchestrator/historian';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -306,6 +307,17 @@ export async function POST(request: NextRequest) {
     }
 
     await user.save();
+
+    // Log completion to the Historian (fire-and-forget to avoid blocking response)
+    logCompletion({
+      walletAddress: userId,
+      questId: quest.id,
+      questTitle: quest.title,
+      questCategory: quest.category,
+      pointsEarned: quest.points,
+      verificationTypes: quest.verificationTypes,
+      location: location ? { latitude: location.latitude, longitude: location.longitude } : undefined,
+    }).catch((err) => console.error('Historian logCompletion error:', err));
 
     return NextResponse.json({
       success: true,

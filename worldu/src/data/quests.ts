@@ -107,6 +107,16 @@ export const DAILY_QUESTS: Quest[] = [
       name: 'Golden Gate Park',
     },
   },
+  {
+    id: 'catalyst-strangers',
+    title: '⚡ Talk to 7 Strangers',
+    description: 'Step outside your comfort zone. Approach 7 strangers and start a genuine conversation — compliment them, ask for a recommendation, or just say hi.',
+    points: 70,
+    verificationTypes: ['photo'],
+    instructions: 'Talk to 7 different strangers today. Take a selfie or photo at each conversation spot as proof.',
+    icon: '⚡',
+    category: 'catalyst',
+  },
 ];
 
 export const BADGES = [

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { LeaderboardEntry } from '@/types/quest';
 import { Medal1st, Medal, Trophy } from 'iconoir-react';
 import { ReactNode } from 'react';
@@ -87,7 +88,7 @@ export const LeaderboardContent = () => {
 
     return (
       <div className="w-full space-y-2">
-        {data.map((entry) => (
+        {top3.map((entry) => (
           <div
             key={entry.userId}
             className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-xl"
@@ -106,9 +107,17 @@ export const LeaderboardContent = () => {
               >
                 <span className="text-lg font-bold" style={{ color: '#000000' }}>{entry.rank}</span>
               </div>
+              <div>
+                <p className="font-semibold capitalize text-sm">{entry.username}</p>
+                <p className="text-xs text-gray-400">{entry.completedQuests} quests</p>
+              </div>
             </div>
-          );
-        })}
+            <div className="text-right">
+              <p className="font-bold text-green-600">{entry.totalPoints}</p>
+              <p className="text-xs text-gray-500">points</p>
+            </div>
+          </div>
+        ))}
       </div>
     );
   };
@@ -141,17 +150,13 @@ export const LeaderboardContent = () => {
                   <p className="text-xs text-gray-400">{entry.completedQuests} quests</p>
                 </div>
               </div>
-              <div>
-                <p className="font-semibold capitalize">{entry.username}</p>
-                <p className="text-xs text-gray-500">{entry.completedQuests} quests</p>
+              <div className="text-right">
+                <p className="font-bold text-green-600">{entry.totalPoints}</p>
+                <p className="text-xs text-gray-500">points</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="font-bold text-green-600">{entry.totalPoints}</p>
-              <p className="text-xs text-gray-500">points</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };

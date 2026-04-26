@@ -23,7 +23,7 @@ export interface Quest {
   instructions: string;
   icon: string;
   duration?: number; // in minutes for timer-based quests
-  category: "movement" | "community" | "mindfulness" | "service" | "discomfort" | "daily";
+  category: "movement" | "community" | "mindfulness" | "service" | "discomfort" | "daily" | "catalyst";
   targetLocation?: QuestLocation; // for location-based quests
 }
 

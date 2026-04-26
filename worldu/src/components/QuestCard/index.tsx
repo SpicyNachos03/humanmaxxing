@@ -83,7 +83,7 @@ export const QuestCard = ({
         </span>
         {onCooldown ? (
           <span className="text-xs text-yellow-600 font-semibold">
-            ✓ Completed - resets in {cooldownHoursRemaining ?? 24}h
+            ✓ Completed - resets in 24h
           </span>
         ) : completed ? (
           <span className="text-xs text-green-600 font-semibold">✓ Completed</span>

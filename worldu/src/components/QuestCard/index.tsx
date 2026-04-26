@@ -8,14 +8,12 @@ interface QuestCardProps {
   quest: Quest;
   completed?: boolean;
   onCooldown?: boolean;
-  cooldownHoursRemaining?: number | null;
 }
 
 export const QuestCard = ({
   quest,
   completed = false,
   onCooldown = false,
-  cooldownHoursRemaining = null,
 }: QuestCardProps) => {
   const router = useRouter();
   const [accepting, setAccepting] = useState(false);

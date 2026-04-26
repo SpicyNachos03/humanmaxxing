@@ -2,7 +2,6 @@ import connectDB from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { DAILY_QUESTS } from '@/data/quests';
 import { NextRequest, NextResponse } from 'next/server';
-import { DAILY_QUESTS } from '@/data/quests';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -84,11 +83,6 @@ export async function POST(request: NextRequest) {
           );
         }
       }
-    }
-
-    const quest = DAILY_QUESTS.find(q => q.id === questId);
-    if (!quest) {
-      return NextResponse.json({ error: 'Invalid quest' }, { status: 400 });
     }
 
     // Check if user already completed this quest

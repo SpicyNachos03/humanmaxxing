@@ -8,10 +8,11 @@ import { notFound } from 'next/navigation';
 export default async function QuestDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  const quest = DAILY_QUESTS.find((q) => q.id === params.id);
+  const { id } = await params;
+  const quest = DAILY_QUESTS.find((q) => q.id === id);
 
   if (!quest) {
     notFound();

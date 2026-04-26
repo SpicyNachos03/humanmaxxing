@@ -5,7 +5,8 @@ export type VerificationType =
   | "timer"
   | "qr_code"
   | "peer_confirm"
-  | "location_time";
+  | "location_time"
+  | "self_report";
 
 export interface QuestLocation {
   latitude: number;
@@ -23,7 +24,7 @@ export interface Quest {
   instructions: string;
   icon: string;
   duration?: number; // in minutes for timer-based quests
-  category: "movement" | "community" | "mindfulness" | "service" | "discomfort";
+  category: "movement" | "community" | "mindfulness" | "service" | "discomfort" | "daily";
   targetLocation?: QuestLocation; // for location-based quests
 }
 

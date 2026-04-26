@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 export const RewardsContent = () => {
   const { data: session } = useSession();
   const [userPoints, setUserPoints] = useState(0);
+  const [username, setUsername] = useState('');
   const [unlockedBadges, setUnlockedBadges] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,9 +15,10 @@ export const RewardsContent = () => {
     const fetchUserProgress = async () => {
       if (session?.user?.walletAddress) {
         try {
-          const response = await fetch(`/api/user/progress?userId=${session.user.walletAddress}`);
+          const response = await fetch(`/api/user/progress?userId=${session.user.walletAddress}&username=${encodeURIComponent(session.user.username || '')}`);
           const data = await response.json();
           setUserPoints(data.totalPoints || 0);
+          setUsername(data.username || session.user.username || 'User');
           setUnlockedBadges(data.badges?.map((b: any) => b.id) || []);
         } catch (error) {
           console.error('Error fetching user progress:', error);
@@ -39,11 +41,17 @@ export const RewardsContent = () => {
         <>
           {/* Points Summary */}
           <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-3">
               <div>
+                <p className="text-sm text-gray-600">Welcome back,</p>
+                <p className="text-lg font-semibold capitalize">{username}</p>
+              </div>
+              <div className="text-right">
                 <p className="text-sm text-gray-600">Total Points</p>
                 <p className="text-3xl font-bold text-green-600">{userPoints}</p>
               </div>
+            </div>
+            <div className="flex items-center justify-between">
               <div className="text-right">
                 <p className="text-sm text-gray-600">Next Reward</p>
                 <p className="text-lg font-semibold">150 pts</p>

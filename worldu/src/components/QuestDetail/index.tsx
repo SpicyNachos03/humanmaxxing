@@ -9,6 +9,7 @@ import { useGeolocation, calculateDistance } from '@/hooks/useGeolocation';
 import { QRScanner } from '@/components/QRScanner';
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
 import { useSession } from 'next-auth/react';
+import { getQuestCooldownRemainingHours } from '@/lib/questCooldown';
 
 interface QuestDetailProps {
   quest: Quest;
@@ -106,6 +107,40 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
     // Use wallet address as peer ID for QR code
     return session?.user?.walletAddress || 'user-id';
   };
+
+  // Check cooldown status on mount and after completion
+  useEffect(() => {
+    const checkCooldown = async () => {
+      if (!session?.user?.walletAddress) return;
+
+      try {
+        const response = await fetch(
+          `/api/user/progress?userId=${session.user.walletAddress}`,
+          { cache: 'no-store' }
+        );
+        const data = await response.json();
+
+        const remaining = getQuestCooldownRemainingHours(
+          quest.id,
+          data?.questCompletions
+        );
+
+        if (remaining !== null) {
+          setCooldownRemaining(remaining);
+          // Redirect home if user navigated here while still on cooldown
+          if (buttonState !== 'success') {
+            router.replace('/home');
+          }
+        } else {
+          setCooldownRemaining(null);
+        }
+      } catch (error) {
+        console.error('Error checking cooldown:', error);
+      }
+    };
+
+    checkCooldown();
+  }, [session?.user?.walletAddress, quest.id, buttonState, router]);
 
   const handleCompleteQuest = async () => {
     setButtonState('pending');
@@ -209,7 +244,8 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
 
       setButtonState('success');
       setTimeout(() => {
-        router.push('/');
+        router.replace('/home');
+        router.refresh();
       }, 1500);
     } catch (error) {
       console.error('Error completing quest:', error);
@@ -445,10 +481,22 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
         </div>
       )}
 
+      {cooldownRemaining ? (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2 text-yellow-700">
+            <span>⏰</span>
+            <span className="font-semibold">Quest on Cooldown</span>
+          </div>
+          <p className="text-sm text-yellow-600 mt-1">
+            You can complete this quest again in {cooldownRemaining} hours.
+          </p>
+        </div>
+      ) : null}
+
       <LiveFeedback
         label={{
-          failed: errorMessage || 'Failed to complete quest',
-          pending: locationLoading ? 'Getting location...' : 'Submitting...',
+          failed: 'Failed to complete quest',
+          pending: 'Completing...',
           success: 'Quest completed!',
         }}
         state={buttonState}
@@ -477,7 +525,7 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
       </LiveFeedback>
 
       <Button
-        onClick={() => router.push('/')}
+        onClick={() => router.push('/home')}
         disabled={buttonState === 'pending'}
         size="lg"
         variant="secondary"

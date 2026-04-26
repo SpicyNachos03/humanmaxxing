@@ -99,27 +99,33 @@ export const RewardsContent = () => {
           <div className="mt-6">
             <h2 className="text-lg font-semibold mb-3">Available Rewards</h2>
             <div className="space-y-3">
-              <div className="border-2 border-gray-200 rounded-xl p-4 flex items-center justify-between">
+              <div className={`border-2 border-gray-200 rounded-xl p-4 flex items-center justify-between ${userPoints >= 200 ? '' : 'opacity-60'}`}>
                 <div>
                   <p className="font-semibold">Campus Coffee</p>
                   <p className="text-sm text-gray-600">Free coffee at campus cafe</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-green-600">200 pts</p>
-                  <button className="text-xs bg-green-600 text-white px-3 py-1 rounded-full mt-1">
-                    Redeem
+                  <p className={`font-bold ${userPoints >= 200 ? 'text-green-600' : 'text-gray-400'}`}>200 pts</p>
+                  <button 
+                    className={`text-xs px-3 py-1 rounded-full mt-1 ${userPoints >= 200 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'}`}
+                    disabled={userPoints < 200}
+                  >
+                    {userPoints >= 200 ? 'Redeem' : 'Locked'}
                   </button>
                 </div>
               </div>
-              <div className="border-2 border-gray-200 rounded-xl p-4 flex items-center justify-between">
+              <div className={`border-2 border-gray-200 rounded-xl p-4 flex items-center justify-between ${userPoints >= 300 ? '' : 'opacity-60'}`}>
                 <div>
                   <p className="font-semibold">Event Priority</p>
                   <p className="text-sm text-gray-600">Skip the line at campus events</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-green-600">300 pts</p>
-                  <button className="text-xs bg-green-600 text-white px-3 py-1 rounded-full mt-1">
-                    Redeem
+                  <p className={`font-bold ${userPoints >= 300 ? 'text-green-600' : 'text-gray-400'}`}>300 pts</p>
+                  <button 
+                    className={`text-xs px-3 py-1 rounded-full mt-1 ${userPoints >= 300 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'}`}
+                    disabled={userPoints < 300}
+                  >
+                    {userPoints >= 300 ? 'Redeem' : 'Locked'}
                   </button>
                 </div>
               </div>
@@ -130,7 +136,10 @@ export const RewardsContent = () => {
                 </div>
                 <div className="text-right">
                   <p className={`font-bold ${userPoints >= 500 ? 'text-green-600' : 'text-gray-400'}`}>500 pts</p>
-                  <button className={`text-xs px-3 py-1 rounded-full mt-1 ${userPoints >= 500 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'}`}>
+                  <button 
+                    className={`text-xs px-3 py-1 rounded-full mt-1 ${userPoints >= 500 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'}`}
+                    disabled={userPoints < 500}
+                  >
                     {userPoints >= 500 ? 'Redeem' : 'Locked'}
                   </button>
                 </div>

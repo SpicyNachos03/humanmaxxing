@@ -1,6 +1,6 @@
 import connectDB from '@/lib/mongodb';
 import { User } from '@/models/User';
-import { DAILY_QUESTS } from '@/data/quests';
+import { DAILY_QUESTS, BADGES } from '@/data/quests';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 
@@ -100,13 +100,23 @@ export async function POST(request: NextRequest) {
     
     if (!user) {
       // Create new user with initial points from this quest
+      const newBadges = [];
+      
+      // Award First Steps badge for first quest
+      newBadges.push({
+        id: 'first-quest',
+        name: 'First Steps',
+        icon: '🎯',
+        unlockedAt: new Date()
+      });
+
       user = await User.create({
         walletAddress: userId,
         username: 'New User',
         totalPoints: quest.points,
         currentStreak: 1,
         completedQuests: [questId],
-        badges: []
+        badges: newBadges
       });
       
       return NextResponse.json({
@@ -128,6 +138,66 @@ export async function POST(request: NextRequest) {
     user.totalPoints += quest.points;
     user.currentStreak += 1;
     user.completedQuests.push(questId);
+
+    // Check and award badges
+    const newBadges = [];
+    const existingBadgeIds = user.badges.map(b => b.id);
+
+    // First Steps badge - complete first quest
+    if (!existingBadgeIds.includes('first-quest') && user.completedQuests.length === 1) {
+      newBadges.push({
+        id: 'first-quest',
+        name: 'First Steps',
+        icon: '🎯',
+        unlockedAt: new Date()
+      });
+    }
+
+    // Century badge - earn 100 points
+    if (!existingBadgeIds.includes('points-100') && user.totalPoints >= 100) {
+      newBadges.push({
+        id: 'points-100',
+        name: 'Century',
+        icon: '💯',
+        unlockedAt: new Date()
+      });
+    }
+
+    // High Achiever badge - earn 500 points
+    if (!existingBadgeIds.includes('points-500') && user.totalPoints >= 500) {
+      newBadges.push({
+        id: 'points-500',
+        name: 'High Achiever',
+        icon: '🏆',
+        unlockedAt: new Date()
+      });
+    }
+
+    // On Fire badge - 3-day streak
+    if (!existingBadgeIds.includes('streak-3') && user.currentStreak >= 3) {
+      newBadges.push({
+        id: 'streak-3',
+        name: 'On Fire',
+        icon: '🔥',
+        unlockedAt: new Date()
+      });
+    }
+
+    // Unstoppable badge - 7-day streak
+    if (!existingBadgeIds.includes('streak-7') && user.currentStreak >= 7) {
+      newBadges.push({
+        id: 'streak-7',
+        name: 'Unstoppable',
+        icon: '⚡',
+        unlockedAt: new Date()
+      });
+    }
+
+    // Add new badges to user
+    if (newBadges.length > 0) {
+      user.badges.push(...newBadges);
+    }
+
     await user.save();
 
     const updatedUser = user;

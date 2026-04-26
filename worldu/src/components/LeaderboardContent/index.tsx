@@ -1,19 +1,16 @@
 'use client';
 
-import { Tabs, TabItem } from '@worldcoin/mini-apps-ui-kit-react';
 import { useState, useEffect } from 'react';
 import { LeaderboardEntry } from '@/types/quest';
-import { Home, User, Globe } from 'iconoir-react';
 
 export const LeaderboardContent = () => {
-  const [activeTab, setActiveTab] = useState('campus');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const response = await fetch(`/api/leaderboard?type=${activeTab}`);
+        const response = await fetch('/api/leaderboard');
         const data = await response.json();
         setLeaderboard(data.leaderboard || []);
       } catch (error) {
@@ -24,7 +21,7 @@ export const LeaderboardContent = () => {
     };
 
     fetchLeaderboard();
-  }, [activeTab]);
+  }, []);
 
   const renderLeaderboard = (data: LeaderboardEntry[]) => {
     return (
@@ -65,35 +62,14 @@ export const LeaderboardContent = () => {
 
   return (
     <div className="w-full">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabItem value="campus" label="Campus" icon={<Home />} />
-        <TabItem value="friends" label="Friends" icon={<User />} />
-        <TabItem value="global" label="Global" icon={<Globe />} />
-      </Tabs>
-
+      <h2 className="text-lg font-semibold mb-3">Global Leaderboard</h2>
       <div className="mt-4">
         {loading ? (
           <p className="text-center text-gray-500">Loading leaderboard...</p>
         ) : (
           <>
-            {activeTab === 'campus' && (
-              <>
-                <p className="text-sm text-gray-600 mb-3">Top performers on your campus</p>
-                {renderLeaderboard(leaderboard)}
-              </>
-            )}
-            {activeTab === 'friends' && (
-              <>
-                <p className="text-sm text-gray-600 mb-3">Your friends rankings</p>
-                {renderLeaderboard(leaderboard.slice(0, 5))}
-              </>
-            )}
-            {activeTab === 'global' && (
-              <>
-                <p className="text-sm text-gray-600 mb-3">Top humans worldwide</p>
-                {renderLeaderboard(leaderboard)}
-              </>
-            )}
+            <p className="text-sm text-gray-600 mb-3">Top humans worldwide</p>
+            {renderLeaderboard(leaderboard)}
           </>
         )}
       </div>

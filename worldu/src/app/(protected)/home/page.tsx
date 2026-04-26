@@ -30,11 +30,11 @@ export default async function Home() {
   }
 
   const now = new Date();
-  const cooldownQuestIds = new Set<string>();
+  const cooldownByQuestId = new Map<string, number>();
   DAILY_QUESTS.forEach((quest) => {
     const remaining = getQuestCooldownRemainingHours(quest.id, questCompletions, now);
     if (remaining !== null) {
-      cooldownQuestIds.add(quest.id);
+      cooldownByQuestId.set(quest.id, remaining);
     }
   });
 
@@ -64,7 +64,8 @@ export default async function Home() {
                 key={quest.id}
                 quest={quest}
                 completed={completedQuestIds.includes(quest.id)}
-                onCooldown={cooldownQuestIds.has(quest.id)}
+                onCooldown={cooldownByQuestId.has(quest.id)}
+                cooldownHoursRemaining={cooldownByQuestId.get(quest.id) ?? null}
               />
             ))}
           </div>

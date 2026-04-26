@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get('userId');
+    const username = searchParams.get('username');
 
     if (!walletAddress) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
@@ -19,16 +20,21 @@ export async function GET(request: NextRequest) {
       // Create new user if doesn't exist
       user = await User.create({
         walletAddress,
-        username: 'New User',
+        username: username || 'New User',
         totalPoints: 0,
         currentStreak: 0,
         completedQuests: [],
         badges: []
       });
+    } else if (username && (!user.username || user.username === 'New User')) {
+      // Update username only if it's not set or still "New User"
+      user.username = username;
+      await user.save();
     }
 
     return NextResponse.json({
       userId: user.walletAddress,
+      username: user.username,
       totalPoints: user.totalPoints,
       completedQuests: user.completedQuests,
       currentStreak: user.currentStreak,

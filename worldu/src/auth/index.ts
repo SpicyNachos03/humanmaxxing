@@ -100,9 +100,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               badges: []
             });
           } else {
-            // Update existing user info
-            user.username = userInfo.username || user.username;
-            user.profilePictureUrl = userInfo.profilePictureUrl || user.profilePictureUrl;
+            // Update existing user info, but preserve username if already set
+            if (!user.username || user.username === 'New User') {
+              user.username = userInfo.username || user.username;
+            }
+            if (userInfo.profilePictureUrl) {
+              user.profilePictureUrl = userInfo.profilePictureUrl;
+            }
             await user.save();
           }
         } catch (error) {

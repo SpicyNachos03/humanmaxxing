@@ -2,6 +2,16 @@ import { Quest } from '@/types/quest';
 
 export const DAILY_QUESTS: Quest[] = [
   {
+    id: 'daily-checkin',
+    title: 'Daily Check-in',
+    description: 'Log in and check in for the day',
+    points: 5,
+    verificationType: 'self_report',
+    instructions: 'Simply click to complete your daily check-in. Easy points!',
+    icon: '✅',
+    category: 'daily',
+  },
+  {
     id: 'walk-10',
     title: '10-minute walk',
     description: 'Take a refreshing 10-minute walk outside',

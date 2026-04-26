@@ -2,6 +2,7 @@ import connectDB from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { DAILY_QUESTS } from '@/data/quests';
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -31,11 +32,20 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     
+    const session = await auth();
+    if (!session?.user?.walletAddress) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please authenticate first.' },
+        { status: 401 }
+      );
+    }
+    
     const body = await request.json();
-    const { questId, userId, proof, location, peerConfirmation } = body;
+    const { questId, proof, location, peerConfirmation } = body;
+    const userId = session.user.walletAddress;
 
-    // Validate required fields
-    if (!questId || !userId || !proof) {
+    // Validate required fields (proof is optional for self_report quests)
+    if (!questId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -51,8 +61,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Server-side location verification
-    const requiresLocation = ['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation;
+    // Server-side location verification (skip for self_report quests)
+    const requiresLocation = quest.verificationType !== 'self_report' && (['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation);
     
     if (requiresLocation) {
       if (!location || typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
@@ -85,9 +95,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if user already completed this quest
-    const user = await User.findOne({ walletAddress: userId });
-    if (user && user.completedQuests.includes(questId)) {
+    // Check if user exists and if they already completed this quest
+    let user = await User.findOne({ walletAddress: userId });
+    
+    if (!user) {
+      // Create new user with initial points from this quest
+      user = await User.create({
+        walletAddress: userId,
+        username: 'New User',
+        totalPoints: quest.points,
+        currentStreak: 1,
+        completedQuests: [questId],
+        badges: []
+      });
+      
+      return NextResponse.json({
+        success: true,
+        newTotal: user.totalPoints,
+        pointsEarned: quest.points,
+        message: 'Quest completed successfully'
+      });
+    }
+
+    if (user.completedQuests.includes(questId)) {
       return NextResponse.json(
         { error: 'Quest already completed' },
         { status: 400 }
@@ -95,14 +125,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user with new quest completion and points
-    const updatedUser = await User.findOneAndUpdate(
-      { walletAddress: userId },
-      {
-        $inc: { totalPoints: quest.points, currentStreak: 1 },
-        $addToSet: { completedQuests: questId }
-      },
-      { upsert: true, new: true }
-    );
+    user.totalPoints += quest.points;
+    user.currentStreak += 1;
+    user.completedQuests.push(questId);
+    await user.save();
+
+    const updatedUser = user;
 
     return NextResponse.json({
       success: true,

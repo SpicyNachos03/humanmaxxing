@@ -2,6 +2,15 @@ import { auth } from '@/auth';
 import { Page } from '@/components/PageLayout';
 import { LeaderboardContent } from '@/components/LeaderboardContent';
 import { Marble, TopBar } from '@worldcoin/mini-apps-ui-kit-react';
+import { Suspense } from 'react';
+
+function LeaderboardLoading() {
+  return (
+    <div className="w-full flex items-center justify-center py-8">
+      <p className="text-gray-500">Loading leaderboard...</p>
+    </div>
+  );
+}
 
 export default async function LeaderboardPage() {
   const session = await auth();
@@ -22,7 +31,9 @@ export default async function LeaderboardPage() {
         />
       </Page.Header>
       <Page.Main className="flex flex-col items-center justify-start gap-4 mb-16">
-        <LeaderboardContent />
+        <Suspense fallback={<LeaderboardLoading />}>
+          <LeaderboardContent />
+        </Suspense>
       </Page.Main>
     </>
   );

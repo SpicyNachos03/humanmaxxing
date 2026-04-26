@@ -10,14 +10,12 @@ interface QuestCardProps {
   quest: Quest;
   completed?: boolean;
   onCooldown?: boolean;
-  cooldownHoursRemaining?: number | null;
 }
 
 export const QuestCard = ({
   quest,
   completed = false,
   onCooldown = false,
-  cooldownHoursRemaining = null,
 }: QuestCardProps) => {
   const router = useRouter();
   const [accepting, setAccepting] = useState(false);
@@ -104,9 +102,6 @@ export const QuestCard = ({
             {quest.duration} min
           </span>
         )}
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-lightest text-brand-dark">
-          {verificationLabels[quest.verificationType] || 'Verify'}
-        </span>
       </div>
       {errorMessage && (
         <p className="text-xs text-yellow-700 mt-2">{errorMessage}</p>

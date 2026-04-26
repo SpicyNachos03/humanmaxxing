@@ -48,3 +48,4 @@ vision-api/venv/
 vision-api/*.pt
 vision-api/__pycache__/
 vision-api/requirements.txt
+vision-api/.venv

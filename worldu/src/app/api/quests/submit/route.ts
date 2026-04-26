@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Server-side location verification (skip for self_report quests)
-    const requiresLocation = quest.verificationType !== 'self_report' && (['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation);
+    const requiresLocation = !quest.verificationTypes.includes('self_report') && (quest.verificationTypes.includes('location') || quest.targetLocation);
     
     if (requiresLocation) {
       if (!location || typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {

@@ -5,7 +5,6 @@ export type VerificationType =
   | "timer"
   | "qr_code"
   | "peer_confirm"
-  | "location_time"
   | "self_report";
 
 export interface QuestLocation {
@@ -20,7 +19,7 @@ export interface Quest {
   title: string;
   description: string;
   points: number;
-  verificationType: VerificationType;
+  verificationTypes: VerificationType[];
   instructions: string;
   icon: string;
   duration?: number; // in minutes for timer-based quests

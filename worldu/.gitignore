@@ -42,3 +42,9 @@ next-env.d.ts
 !.env.sample
 
 .env.sample
+
+# Vision API
+vision-api/venv/
+vision-api/*.pt
+vision-api/__pycache__/
+vision-api/requirements.txt

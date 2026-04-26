@@ -24,33 +24,50 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
   const [peerWorldId, setPeerWorldId] = useState<string | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showMyQR, setShowMyQR] = useState(false);
-  const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null);
+  const [showTimer, setShowTimer] = useState(false);
+  const [timerValue, setTimerValue] = useState(30);
+  const [timerComplete, setTimerComplete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { getCurrentPosition, loading: locationLoading } = useGeolocation();
 
-  const requiresPhoto = ['photo', 'selfie', 'location', 'location_time'].includes(quest.verificationType);
-  const requiresLocation = ['location', 'location_time'].includes(quest.verificationType) || quest.targetLocation;
-  const requiresPeerConfirm = quest.verificationType === 'peer_confirm';
+  const requiresPhoto = quest.verificationTypes.includes('photo') || quest.verificationTypes.includes('selfie');
+  const requiresLocation = quest.verificationTypes.includes('location') || quest.targetLocation;
+  const requiresPeerConfirm = quest.verificationTypes.includes('peer_confirm');
+  const requiresTimer = quest.verificationTypes.includes('timer');
+  const requiresQRCode = quest.verificationTypes.includes('qr_code');
+  const requiresSelfReport = quest.verificationTypes.includes('self_report');
 
-  const getVerificationLabel = () => {
-    switch (quest.verificationType) {
-      case 'photo':
-        return 'Photo proof required';
-      case 'location':
-        return 'Location verification';
-      case 'location_time':
-        return 'Location & time verification';
-      case 'timer':
-        return `Timer: ${quest.duration} minutes`;
-      case 'qr_code':
-        return 'QR code check-in';
-      case 'peer_confirm':
-        return 'Peer confirmation required';
-      case 'selfie':
-        return 'Selfie verification';
-      default:
-        return 'Verification required';
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (showTimer && timerValue > 0) {
+      interval = setInterval(() => {
+        setTimerValue((prev) => prev - 1);
+      }, 1000);
+    } else if (timerValue === 0) {
+      setTimerComplete(true);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showTimer, timerValue]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getVerificationLabels = () => {
+    const labels: { [key: string]: string } = {
+      photo: 'Photo Verification',
+      selfie: 'Selfie Verification',
+      location: 'Location Verification',
+      timer: `Timer: ${quest.duration || 0} minutes`,
+      qr_code: 'QR Code Verification',
+      peer_confirm: 'Peer Confirmation',
+      self_report: 'Self Report',
+    };
+    return quest.verificationTypes.map(type => labels[type] || type);
   };
 
   const handlePhotoCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,6 +190,36 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
         }
       }
 
+      // Verify photo with YOLO vision API if photo is required
+      if (requiresPhoto && photoPreview) {
+        try {
+          const visionResponse = await fetch('/api/vision/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              questId: quest.id,
+              imageBase64: photoPreview,
+            }),
+          });
+
+          const visionResult = await visionResponse.json();
+          console.log('Vision result:', visionResult);
+
+          if (!visionResult.verified && !visionResult.fallback) {
+            setButtonState('failed');
+            setErrorMessage(visionResult.message || 'Photo verification failed. Please take a photo that shows the required items.');
+            return;
+          }
+          
+          // Show success feedback with what was detected
+          if (visionResult.verified) {
+            console.log(`Verified: ${visionResult.strict_match_count}/${visionResult.required_count} items detected`);
+          }
+        } catch (visionError) {
+          console.warn('Vision API unavailable, proceeding without verification:', visionError);
+        }
+      }
+
       // Submit quest completion
       const submissionData = {
         questId: quest.id,
@@ -228,11 +275,13 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
           </div>
 
           <div>
-            <h3 className="font-semibold mb-2">Verification Method</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
-                {getVerificationLabel()}
-              </span>
+            <h3 className="font-semibold mb-2">Verification Methods</h3>
+            <div className="flex flex-wrap gap-2">
+              {getVerificationLabels().map((label, index) => (
+                <span key={index} className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                  {label}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -307,6 +356,59 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
                 : 'Your location will be captured when you complete this quest'}
             </span>
           </div>
+        </div>
+      )}
+
+      {requiresTimer && !showTimer && !timerComplete && (
+        <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
+          <h3 className="font-semibold mb-3">Timer Verification</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Start the timer when you begin this quest. Wait for it to complete before finishing.
+          </p>
+          <Button
+            onClick={() => setShowTimer(true)}
+            variant="secondary"
+            className="w-full"
+          >
+            Start 30-Second Timer
+          </Button>
+        </div>
+      )}
+
+      {requiresTimer && showTimer && !timerComplete && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-4 text-center">
+          <h3 className="font-semibold mb-4 text-yellow-800">Timer in Progress</h3>
+          <div className="text-6xl font-mono font-bold text-yellow-900 mb-4">
+            {formatTime(timerValue)}
+          </div>
+          <p className="text-sm text-yellow-700">
+            Complete your quest while the timer counts down
+          </p>
+        </div>
+      )}
+
+      {requiresTimer && timerComplete && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2 text-green-700">
+            <span>✓</span>
+            <span className="text-sm font-semibold">Timer complete! You can now finish your quest.</span>
+          </div>
+        </div>
+      )}
+
+      {requiresQRCode && (
+        <div className="border-2 border-gray-200 rounded-xl p-4 mb-4">
+          <h3 className="font-semibold mb-3">QR Code Verification</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Scan the QR code at the quest location to verify your presence.
+          </p>
+          <Button
+            onClick={() => setShowQRScanner(true)}
+            variant="secondary"
+            className="w-full"
+          >
+            🔍 Scan QR Code
+          </Button>
         </div>
       )}
 
@@ -402,12 +504,23 @@ export const QuestDetail = ({ quest }: QuestDetailProps) => {
       >
         <Button
           onClick={handleCompleteQuest}
-          disabled={buttonState === 'pending' || cooldownRemaining !== null}
+          disabled={
+            buttonState === 'pending' ||
+            (requiresPhoto && !photoPreview) ||
+            (requiresPeerConfirm && !peerWorldId) ||
+            (requiresTimer && !timerComplete)
+          }
           size="lg"
           variant="primary"
           className="w-full"
         >
-          {cooldownRemaining ? 'On Cooldown' : 'Complete Quest'}
+          {requiresPhoto && !photoPreview
+            ? 'Take Photo First'
+            : requiresPeerConfirm && !peerWorldId
+            ? 'Verify Peer First'
+            : requiresTimer && !timerComplete
+            ? 'Complete Timer First'
+            : 'Complete Quest'}
         </Button>
       </LiveFeedback>
 
